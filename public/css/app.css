@@ -105,8 +105,10 @@ html[data-mode="dark"] {
   --border: rgba(255, 250, 240, 0.10);
   --border-strong: rgba(255, 250, 240, 0.22);
   --text: #F2EDE4;
-  --text-2: #B3A99B;
-  --text-3: #857B6D;
+  /* 次级/三级文字：原来 #B3A99B / #857B6D 偏暗，"说明文字发灰看不清"。
+     现在压到任何一层底色上都满足 WCAG AA（4.5:1），最浅的 surface-3 上也不例外。 */
+  --text-2: #CFC6B8;
+  --text-3: #B0A595;
 
   --accent: #E0A03C;
   --accent-soft: #362A14;
@@ -173,6 +175,10 @@ body::before {
 }
 
 ::selection { background: var(--primary-soft); color: var(--primary); }
+
+/* 输入框占位符：显式指定颜色。浏览器默认的灰在深色模式下几乎看不见，
+   而 --text-3 现在满足 AA，直接复用即可（opacity 1 是为了不被浏览器再压一层透明度）。 */
+::placeholder { color: var(--text-3); opacity: 1; }
 
 h1, h2, h3, h4 { margin: 0; font-weight: 600; }
 h1 { font-size: var(--fs-xl); font-family: var(--font-serif); letter-spacing: 0.01em; }
