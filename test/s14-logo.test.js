@@ -121,6 +121,92 @@ test('S14 · img/logo 目录里确实有图（用户放的那张）', () => {
 });
 
 // ---------------------------------------------------------------------------
+// 标签页图标（favicon）也用这张 logo
+// ---------------------------------------------------------------------------
+
+/** 抠出 index.html 里的 <link rel="icon"> */
+function readIconTag() {
+  const m = /<link[^>]*\brel="icon"[^>]*>/.exec(HTML);
+  assert.ok(m, 'index.html 里应有 <link rel="icon">');
+  return m[0];
+}
+
+/** 把 index.html 里的资源地址按真实路由解析成磁盘绝对路径（两套通道） */
+function resolveRef(href) {
+  // /img/* 的根是 img/，所以前缀本身要先剥掉（与 server/http.js 的路由一致）
+  if (href.startsWith('/img/')) return path.resolve(ASSET_DIR, href.slice('/img/'.length));
+  return path.resolve(PUBLIC_DIR, href.replace(/^\//, ''));
+}
+
+/** 从 icon 标签里取 href */
+function readIconHref() {
+  const href = /href="([^"]+)"/.exec(readIconTag());
+  assert.ok(href, '图标标签必须有 href');
+  return href[1];
+}
+
+test('S14 · 标签页图标与侧栏 logo 是同一张图', () => {
+  const iconHref = readIconHref();
+
+  assert.ok(
+    !/^data:/.test(iconHref),
+    '标签页图标应指向真实文件，而不是内嵌的 SVG 图形——' +
+      '内嵌图形与侧栏那张 logo 是两套画法，改了图这里不会跟着变',
+  );
+
+  const { src } = readLogoTag();
+  assert.equal(
+    resolveRef(iconHref),
+    resolveRef(src),
+    `标签页图标（${iconHref}）与侧栏 logo（${src}）指向了不同的文件。"换成这张 logo"` +
+      '指的是同一张图；若复制一份到 public/ 下，日后换图就会留下一个对不上的旧图标',
+  );
+
+  assert.ok(fs.existsSync(resolveRef(iconHref)), `标签页图标指向的 ${iconHref} 在磁盘上不存在`);
+});
+
+test('S14 · 标签页图标能取到真实字节，而不是一段 HTML', async (t) => {
+  const srv = await startTestServer();
+  t.after(() => srv.close());
+
+  const iconHref = readIconHref();
+  const onDisk = fs.readFileSync(resolveRef(iconHref));
+  const res = await fetchRaw(srv, iconHref);
+
+  assert.equal(res.status, 200, `标签页图标取不到：${iconHref}`);
+  assert.ok(
+    res.type.startsWith('image/'),
+    `标签页图标的 Content-Type 是 ${res.type}，不是图片——地址多半落到了页面回退上，` +
+      '浏览器只会显示一个默认的空图标',
+  );
+  assert.equal(res.bytes.length, onDisk.length, '取到的字节数与磁盘不一致');
+  assert.ok(res.bytes.equals(onDisk), '取到的内容与磁盘上的文件不一样');
+});
+
+test('S14 · 标签页图标声明的 type 与实际格式一致', () => {
+  const icon = readIconTag();
+  const declared = /type="([^"]+)"/.exec(icon);
+  assert.ok(
+    declared,
+    '应声明 type：浏览器会据此挑图标，声明错了会直接跳过这个候选',
+  );
+
+  const ext = path.extname(readIconHref()).toLowerCase();
+  const expected = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon',
+  }[ext];
+
+  assert.ok(expected, `没认出 ${ext} 对应的图标类型，请换用 jpg / png / gif / webp / svg / ico`);
+  assert.equal(declared[1], expected, `扩展名是 ${ext}，type 应写 ${expected}`);
+});
+
+// ---------------------------------------------------------------------------
 // 样式：铺满印章方框，且不挡住自己
 // ---------------------------------------------------------------------------
 
