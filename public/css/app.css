@@ -901,6 +901,11 @@ button, input, textarea, select {
 }
 .switch.on { background: var(--primary); }
 .switch.on::after { transform: translateX(19px); }
+.switch:disabled { opacity: 0.55; cursor: default; }
+
+/* 开关旁边的文字状态：开着时用主色，让"已生效"一眼可见 */
+.s-state { font-size: var(--fs-xs); color: var(--text-3); }
+.s-state.is-on { color: var(--primary); }
 
 .backup-list { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; }
 .backup-item {

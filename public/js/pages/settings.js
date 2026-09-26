@@ -162,16 +162,31 @@ function backupListBlock(backups) {
     </div>`;
 }
 
-function aboutBlock() {
+function aboutBlock(autostart) {
+  const supported = autostart?.supported !== false;
+  const enabled = Boolean(autostart?.enabled);
+  const stateText = !supported ? '仅 Windows 支持' : enabled ? '已开启' : '未开启';
+
   return `
     <div class="card settings-block">
       <div class="section-title mb-3">关于</div>
       <div class="settings-row">
         <div>
           <div class="s-label">开机自动启动</div>
-          <div class="s-desc">双击目录里的「安装开机自启.bat」即可设置，取消请用「取消开机自启.bat」</div>
+          <div class="s-desc">
+            开启后每次开机在后台自行启动（窗口最小化）。<br>
+            也可以直接双击目录里的「安装开机自启.bat」或「取消开机自启.bat」，两种方式等效。
+          </div>
         </div>
-        <div class="s-control"><span class="tag">手动设置</span></div>
+        <div class="s-control">
+          ${
+            supported
+              ? `<span class="s-state ${enabled ? 'is-on' : ''}" data-autostart-state>${esc(stateText)}</span>
+                 <button class="switch ${enabled ? 'on' : ''}" type="button"
+                         data-toggle-autostart aria-label="切换开机自动启动"></button>`
+              : `<span class="tag">${esc(stateText)}</span>`
+          }
+        </div>
       </div>
       <div class="settings-row">
         <div>
@@ -266,9 +281,10 @@ async function restoreFlow(name) {
 // ===========================================================================
 
 export async function pageSettings() {
-  const [{ settings, runtime }, { backups }] = await Promise.all([
+  const [{ settings, runtime }, { backups }, autostart] = await Promise.all([
     api.getSettings(),
     api.listBackups(),
+    api.getAutostart(),
   ]);
 
   const html = `
@@ -283,7 +299,7 @@ export async function pageSettings() {
       ${dataBlock(runtime)}
       ${backupBlock(settings)}
       ${backupListBlock(backups)}
-      ${aboutBlock()}
+      ${aboutBlock(autostart)}
     </div>`;
 
   return {
@@ -323,6 +339,28 @@ export async function pageSettings() {
       root.querySelector('[data-export]')?.addEventListener('click', () => {
         window.location.href = '/api/export';
         toastSuccess('正在打包，稍等片刻…');
+      });
+
+      // 开机自启
+      root.querySelector('[data-toggle-autostart]')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        const next = !btn.classList.contains('on');
+        btn.disabled = true;
+        try {
+          const res = await api.setAutostart(next);
+          // 以服务端回报的真实状态为准（快捷方式真的建好了才算开启）
+          btn.classList.toggle('on', res.enabled);
+          const state = root.querySelector('[data-autostart-state]');
+          if (state) {
+            state.textContent = res.enabled ? '已开启' : '未开启';
+            state.classList.toggle('is-on', res.enabled);
+          }
+          toastSuccess(res.enabled ? '已开启开机自启' : '已取消开机自启');
+        } catch (err) {
+          toastError(err.message);
+        } finally {
+          btn.disabled = false;
+        }
       });
 
       // 自动备份开关

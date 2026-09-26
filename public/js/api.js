@@ -110,6 +110,10 @@ export const api = {
   updateSettings: (body) => request('PUT', '/api/settings', { json: body }),
   changeDataRoot: (body) => request('PUT', '/api/settings/data-root', { json: body }),
 
+  // ---- 开机自启 ----
+  getAutostart: () => request('GET', '/api/autostart'),
+  setAutostart: (enabled) => request('PUT', '/api/autostart', { json: { enabled } }),
+
   // ---- 备份 ----
   listBackups: () => request('GET', '/api/backups'),
   createBackup: (reason) => request('POST', '/api/backups', { json: { reason } }),

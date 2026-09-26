@@ -14,18 +14,24 @@ import { badRequest } from '../http.js';
 import { getAllSettings } from '../db.js';
 import { createZip, collectDirEntries } from '../zip.js';
 import { backupStamp } from '../backup.js';
+import { getAutostart, setAutostart } from '../autostart.js';
 
 /** 需要纳入导出的分类目录 */
 const EXPORT_DIRS = ['发布', '计划', '相册'];
 
-/** 允许通过接口修改的设置项 */
+/**
+ * 允许通过接口修改的设置项。
+ *
+ * 注意：这里**刻意不含** autoStart。
+ * 开机自启的真实状态由「启动」文件夹里的快捷方式决定（见 /api/autostart），
+ * 如果允许在这里写一个数据库值，就会出现"开关显示已开、实际没设"的假象。
+ */
 const EDITABLE = new Set([
   'theme',
   'colorMode',
   'backupEnabled',
   'backupTime',
   'backupKeep',
-  'autoStart',
 ]);
 
 /** 允许的主题主色调 */
@@ -84,8 +90,28 @@ export function mountSettingsRoutes(router, ctx) {
         port: config.port,
         projectRoot: PROJECT_ROOT,
         themes: THEMES,
+        // 开机自启的真实状态（读自启动文件夹，不是数据库）
+        autoStart: getAutostart(),
       },
     };
+  });
+
+  /**
+   * 开机自启状态。
+   *
+   * 与手动双击「安装开机自启.bat」等效——两者读写的是同一个快捷方式，
+   * 所以这里报告的是真实状态，而不是应用"以为自己设过"的状态。
+   */
+  router.get('/api/autostart', () => getAutostart());
+
+  /** 开启 / 关闭开机自启 */
+  router.put('/api/autostart', async ({ req }) => {
+    const { readJson } = await import('../http.js');
+    const body = await readJson(req);
+    if (typeof body.enabled !== 'boolean') {
+      throw badRequest('enabled 必须是 true 或 false');
+    }
+    return setAutostart(body.enabled);
   });
 
   /** 更新设置 */
