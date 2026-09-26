@@ -363,10 +363,15 @@ export async function pageSettings() {
 
       // 深色模式
       root.querySelector('[data-toggle-mode]')?.addEventListener('click', async (e) => {
+        // 必须在 await 之前把按钮取出来：事件派发一结束，e.currentTarget 就会被置为 null，
+        // 等 await 回来再去读它只会抛 TypeError（被下面的 catch 吞掉，
+        // 表现成"页面变了、按钮不动"）。
+        const btn = e.currentTarget;
         const next = store.settings.colorMode === 'dark' ? 'light' : 'dark';
         try {
           await store.setColorMode(next);
-          e.currentTarget.classList.toggle('on', next === 'dark');
+          // 以服务端回报的设置为准：万一写库失败或被规范化，按钮也不会显示假状态
+          btn.classList.toggle('on', store.settings.colorMode === 'dark');
         } catch (err) {
           toastError(err.message);
         }
@@ -430,10 +435,12 @@ export async function pageSettings() {
 
       // 自动备份开关
       root.querySelector('[data-toggle-backup]')?.addEventListener('click', async (e) => {
+        // 同上：e.currentTarget 在 await 之后会变成 null，先同步取出来
+        const btn = e.currentTarget;
         const next = store.settings.backupEnabled === 'true' ? 'false' : 'true';
         try {
           await store.update({ backupEnabled: next });
-          e.currentTarget.classList.toggle('on', next === 'true');
+          btn.classList.toggle('on', store.settings.backupEnabled === 'true');
           toastSuccess(next === 'true' ? '已开启自动备份' : '已关闭自动备份');
         } catch (err) {
           toastError(err.message);
