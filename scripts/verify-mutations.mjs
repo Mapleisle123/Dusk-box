@@ -4,12 +4,16 @@
  * 一条测试如果在"改坏了"之后依然通过，它就不是护栏，只是装饰。
  * 这里逐个植入退化写法，每次只植入一处、跑一次、还原，再植入下一处。
  *
+ * 覆盖两个测试文件：
+ *   test/s17-liquid-glass.test.js   液态玻璃材质
+ *   test/s18-style-switch.test.js   外观风格切换（简约 / 新粗野主义）
+ *
  * 注意：**锚点字符串会跟着代码一起过期。** 上一版脚本里钉的还是
  * `--pane-card: … 58%` 和 `--text-3: #7B8393`，而在玻璃重构里这两个值都改过，
  * 于是植入会静默地"找不到目标"。所以每条植入都要求 `apply` 必须真的改变内容，
  * 改不动就判为失败——不许悄悄跳过。
  *
- * 用法：node scripts/verify-s17-mutations.mjs
+ * 用法：node scripts/verify-mutations.mjs
  * 脚本结束时一定会把所有改动还原（含异常路径）。
  */
 
@@ -18,7 +22,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const TEST_FILE = 'test/s17-liquid-glass.test.js';
+const TEST_FILES = ['test/s17-liquid-glass.test.js', 'test/s18-style-switch.test.js'];
 
 const rel = (p) => path.join(ROOT, ...p.split('/'));
 
@@ -92,11 +96,58 @@ const MUTATIONS = [
     apply: (js) => `${js}\n// 故意植入：下面这行会在路由里造一层盖满视口的遮罩\nexport const _stray = (el) => { el.className = 'modal-backdrop'; };\n`,
     expect: '全屏遮罩',
   },
+
+  // ---- S18：外观风格切换（简约 / 新粗野主义）----
+  {
+    name: '加了 style 字段却忘了加进白名单（接口 200、值却不变）',
+    file: 'server/routes/settings.js',
+    apply: (js) => js.replace("  'colorMode',\n  'style',\n", "  'colorMode',\n"),
+    expect: '可切换并持久化',
+  },
+  {
+    name: '粗野主义没关掉光场（底上还有光在流动）',
+    file: 'public/css/app.css',
+    apply: (css) =>
+      css.replace(
+        'html[data-style="brutal"] {\n  /* 墨色',
+        'html[data-style="brutal"] {\n  --glow: color-mix(in srgb, var(--primary) 22%, transparent);\n  /* 墨色',
+      ),
+    expect: '玻璃赖以成立的三样东西',
+  },
+  {
+    name: '粗野主义用回 1px 细边（块面读不出来）',
+    file: 'public/css/app.css',
+    apply: (css) => css.replace('  --bw: 2px;\n', '  --bw: 1px;\n'),
+    expect: '结构：直角、粗边、硬偏移影',
+  },
+  {
+    name: '把 --pane-hi 写成 none（会让整条 box-shadow 失效）',
+    file: 'public/css/app.css',
+    apply: (css) => css.replace('  --pane-hi: 0 0 0 transparent;\n', '  --pane-hi: none;\n'),
+    expect: '--pane-hi 不能写成 none',
+  },
+  {
+    name: '给粗野主义塞一条与默认值相同的空壳覆盖',
+    file: 'public/css/app.css',
+    apply: (css) =>
+      css.replace(
+        'html[data-style="brutal"] {\n  /* 墨色',
+        'html[data-style="brutal"] {\n  --pane-blur-soft: 16px;\n  /* 墨色',
+      ),
+    expect: '空壳覆盖',
+  },
+  {
+    name: '删掉"简约"预览图的圆角保护（选择器失去意义）',
+    file: 'public/css/app.css',
+    apply: (css) =>
+      css.replace('html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }\n', ''),
+    expect: '预览图',
+  },
 ];
 
 function runTest() {
   try {
-    execFileSync(process.execPath, ['--test', '--test-reporter=spec', TEST_FILE], {
+    execFileSync(process.execPath, ['--test', '--test-reporter=spec', ...TEST_FILES], {
       cwd: ROOT,
       stdio: 'pipe',
       encoding: 'utf8',
@@ -149,7 +200,7 @@ try {
   for (const [f, content] of backups) fs.writeFileSync(rel(f), content, 'utf8');
 }
 
-console.log('\n=== S17 反向验证 ===');
+console.log('\n=== 反向验证（S17 液态玻璃 + S18 外观风格）===');
 for (const r of results) console.log(`${r.ok ? '✔' : '✖'} ${r.name}\n    ${r.verdict}`);
 
 const stale = [...backups].filter(([f, content]) => fs.readFileSync(rel(f), 'utf8') !== content).map(([f]) => f);

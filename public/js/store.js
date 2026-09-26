@@ -1,8 +1,16 @@
 /**
- * 全局状态：设置与主题。
+ * 全局状态：设置与外观。
  *
- * 主题是"即时生效"的——切换后立刻改写 html 上的 data 属性，
+ * 外观是"即时生效"的——切换后立刻改写 html 上的 data 属性，
  * 不需要刷新页面。
+ *
+ * 外观有三个相互独立的维度，可以任意组合：
+ *   data-theme  主色调（茜色 / 栀子 / 青瓷 …）
+ *   data-mode   深浅色（light / dark）
+ *   data-style  风格（liquid 简约 / brutal 新粗野主义）
+ * 三个都写成 html 上的属性，而不是往 body 里塞 class：
+ * CSS 那边只需要一条 `html[data-style="brutal"] { … }` 就能换掉整套材质，
+ * 组件本身一行都不用改。
  */
 
 import { api, assetUrl } from './api.js';
@@ -20,13 +28,12 @@ export const store = {
     return data;
   },
 
-  /** 把主题与背景图写到根元素上 */
+  /** 把外观的三个维度 + 背景图写到根元素上 */
   applyTheme() {
-    const theme = this.settings?.theme || 'akane';
-    const mode = this.settings?.colorMode || 'light';
     const root = document.documentElement;
-    root.setAttribute('data-theme', theme);
-    root.setAttribute('data-mode', mode);
+    root.setAttribute('data-theme', this.settings?.theme || 'akane');
+    root.setAttribute('data-mode', this.settings?.colorMode || 'light');
+    root.setAttribute('data-style', this.settings?.style || 'liquid');
     this.applyBackground();
   },
 
@@ -36,6 +43,10 @@ export const store = {
    * 只把图片地址写进 CSS 变量、并打一个 data-bg 标记；
    * 半透明的效果完全交给 CSS 的图层规则去做（见 app.css），
    * 这样换主题、切深浅色时纱的颜色会自动跟着变。
+   *
+   * 注意：新粗野主义风格是平的，那张图在那里不会显示
+   * （由 CSS 里的 `--bg-photo: none !important` 关掉），
+   * 但这里照常写上——切回简约时不需要再走一遍这一步。
    */
   applyBackground() {
     const root = document.documentElement;
@@ -63,6 +74,13 @@ export const store = {
     this.applyTheme();
   },
 
+  /** 切换外观风格（简约 / 新粗野主义） */
+  async setStyle(style) {
+    const res = await api.updateSettings({ style });
+    this.settings = res.settings;
+    this.applyTheme();
+  },
+
   /** 更新任意设置项 */
   async update(patch) {
     const res = await api.updateSettings(patch);
@@ -80,4 +98,18 @@ export const THEME_OPTIONS = [
   { id: 'azure', name: '靛蓝', color: '#2F7FD1' },
   { id: 'violet', name: '紫藤', color: '#7F77DD' },
   { id: 'graphite', name: '墨色', color: '#5F5E5A' },
+];
+
+/** 外观风格可选项（与后端 STYLES 保持一致，这里多带一份界面文案） */
+export const STYLE_OPTIONS = [
+  {
+    id: 'liquid',
+    name: '简约 · 液态玻璃',
+    desc: '半透的玻璃浮在光场上，边缘有一道亮线，模糊把底下的内容推到焦外。',
+  },
+  {
+    id: 'brutal',
+    name: '新粗野主义',
+    desc: '实色块面、直角、粗边、硬偏移的阴影。没有模糊，也没有底下那层光。',
+  },
 ];

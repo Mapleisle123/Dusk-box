@@ -103,6 +103,9 @@ CREATE TABLE IF NOT EXISTS settings (
 export const DEFAULT_SETTINGS = {
   theme: 'akane',
   colorMode: 'light',
+  // 外观风格：liquid（简约·液态玻璃）/ brutal（新粗野主义）。
+  // 与 theme、colorMode 是三个相互独立的维度，可以任意组合。
+  style: 'liquid',
   backupEnabled: 'true',
   backupTime: '23:30',
   backupKeep: '30',

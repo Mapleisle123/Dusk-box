@@ -280,6 +280,154 @@ html[data-mode="dark"][data-theme="azure"]    { --primary: #5AA2E0; --primary-ho
 html[data-mode="dark"][data-theme="violet"]   { --primary: #9A93E8; --primary-hover: #AEA8EE; --primary-soft: #282742; --primary-soft-2: #1F1F33; }
 html[data-mode="dark"][data-theme="graphite"] { --primary: #9A9792; --primary-hover: #B0ADA8; --primary-soft: #2C2B29; --primary-soft-2: #232221; }
 
+/* ==========================================================================
+   外观风格之一：新粗野主义（Neo-Brutalism）
+   ==========================================================================
+   data-style 是第三个外观维度，与主色调（data-theme）、深浅色（data-mode）
+   相互独立，三者可以任意组合。
+
+   这两个风格不是"同一套皮肤的两种配色"，而是两套**相反的材质语言**：
+     简约（liquid）：光从底下透上来，玻璃是半透的、软的、边缘带模糊
+     新粗野主义（brutal）：一切都是实的、硬的、平的，块面之间靠粗边隔开
+
+   所以这一段不是在调参数，而是在**反过来**：
+   把光场关掉（--glow → 透明）、把模糊关掉（--pane-blur → 0）、
+   把填充换成实色（--pane*）、把圆角压平、把柔和的投影换成硬偏移投影。
+   液态玻璃赖以成立的三样东西——底光、亮边、模糊——在这里一样都不留，
+   留下的只有"块面 + 粗边 + 硬影"，这才是粗野主义的语汇。
+
+   之所以能用一段令牌就换掉整套材质，是因为上一轮重构把结构性的东西
+   （圆角、边框宽度、材质、阴影）全部做成了令牌。
+   这也是那次重构真正值钱的地方：它让"再来一种风格"变成一件小事。
+   ========================================================================== */
+html[data-style="brutal"] {
+  /* 墨色：粗野主义的边与影都用它。浅色下近黑，深色下由后面的块改成近白。 */
+  --ink: #0F1013;
+
+  /* 结构：直角 + 2px 粗边 */
+  --radius-sm: 0;
+  --radius: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --bw: 2px;
+
+  /* 材质：全部实心。
+     三种"厚度"不再是透明度，而是三个不同明度的实色面——
+     层级改由**明度差 + 粗边 + 硬影**来读，而不是由透不透来读。 */
+  --pane: var(--surface);
+  --pane-2: var(--surface-3);
+  --pane-card: var(--surface);
+  --pane-edge: var(--ink);
+  /* 这里不能写 none：--pane-hi 是和别的阴影拼在同一个 box-shadow 列表里的
+     （box-shadow: var(--shadow-sm), var(--pane-hi)），而 none 只能单独出现，
+     写进去会让整条声明失效——阴影会一起消失，而且不报错。 */
+  --pane-hi: 0 0 0 transparent;
+  --pane-blur: 0px;
+  --pane-blur-soft: 0px;
+  --pane-sat: 100%;
+
+  /* 光场关掉：粗野主义是平的，底上不该有光在流动。
+     噪点也一并关掉——它是为了让渐变不出现色带，既然没有渐变了就不需要它。 */
+  --glow: transparent;
+  --glow-2: transparent;
+  --glow-3: transparent;
+  --grain-opacity: 0;
+
+  /* 背景图也关掉：照片是"景"，粗野主义要的是"面"。
+     用 !important 是因为 --bg-photo 由 JS 以行内样式写在 html 上，
+     行内样式会盖过这里的规则——不写 !important 就关不掉。
+     用户选的背景图在「简约」风格下照常生效，只是不在这个风格里显示。 */
+  --bg-photo: none !important;
+  /* 图没了，那层"半透明底色纱"也就没有东西可压，一并关掉，把话说清楚。
+     注意这里**不写** --bg-dim：浅色下它本来就是 transparent，
+     写一遍等于什么也没改（S18 里有一条专门抓这种空壳覆盖）；
+     而深色下它是 --bg 的 75%，压在没有图的底色上还是同一个颜色，同样无效果。 */
+  --bg-veil: transparent;
+
+  /* 投影：硬偏移、零模糊、实色。这是粗野主义最标志性的一笔，
+     也是与"柔和分层阴影"最直接的对照。 */
+  --shadow-sm: 2px 2px 0 var(--ink);
+  --shadow: 4px 4px 0 var(--ink);
+  --shadow-lg: 6px 6px 0 var(--ink);
+  --shadow-press: none;
+
+  /* 描边辅助色也换成墨色：粗野主义里没有"几乎看不见的细线"这种东西 */
+  --border: var(--ink);
+  --border-strong: var(--ink);
+
+  /* 动效更直接：粗野主义不"弹"，它是"咔"一下 */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --ease-spring: cubic-bezier(0.2, 0, 0, 1);
+}
+
+html[data-style="brutal"][data-mode="dark"] {
+  --ink: #F4F4F6;
+}
+
+/* 直角：把仍然写死的那些圆角一并压平。
+   这里用 * 而不是逐个列举组件，是为了将来加了新组件也不会漏掉一个圆角——
+   "漏掉一个"在这套风格里非常显眼，而列清单迟早会过期。 */
+html[data-style="brutal"] *,
+html[data-style="brutal"] *::before,
+html[data-style="brutal"] *::after {
+  border-radius: 0;
+}
+
+/* 真正的圆形要放回来：状态点、主题色点、预览缩略图、灯箱按钮。
+   它们不是"圆角矩形"，压成方块就不成样子了。
+   开关的滑块不在此列——方形的轨道配方形的滑块，正是粗野主义该有的样子。 */
+html[data-style="brutal"] .status-dot,
+html[data-style="brutal"] .theme-dot,
+html[data-style="brutal"] .theme-dot::after,
+html[data-style="brutal"] .preview-item,
+html[data-style="brutal"] .preview-item img,
+html[data-style="brutal"] .preview-remove,
+html[data-style="brutal"] .lightbox-nav,
+html[data-style="brutal"] .lightbox-close {
+  border-radius: 50%;
+}
+
+/* 彻底不用玻璃：上面已经把模糊调成 0px，但 backdrop-filter 只要还在，
+   元素仍然会被提升为一个合成层。这里明确写 none，把话说清楚。 */
+html[data-style="brutal"] .sidebar,
+html[data-style="brutal"] .main,
+html[data-style="brutal"] .modal,
+html[data-style="brutal"] .toast {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* 层级靠"重"来建立，不靠颜色深浅 */
+html[data-style="brutal"] h1,
+html[data-style="brutal"] h2,
+html[data-style="brutal"] h3,
+html[data-style="brutal"] .section-title,
+html[data-style="brutal"] .s-label {
+  font-weight: 800;
+}
+
+/* 按下：往影子的方向沉进去，而不是缩小。
+   缩放是"软"的语汇，位移才是"硬"的——同一个动作，两种语言。 */
+html[data-style="brutal"] .btn:active {
+  transform: translate(2px, 2px);
+}
+
+/* 悬停：整体向光源的反方向挪，影子显得更长 */
+html[data-style="brutal"] .card:hover,
+html[data-style="brutal"] .today-item:hover,
+html[data-style="brutal"] .post-card:hover,
+html[data-style="brutal"] .summary-card:hover,
+html[data-style="brutal"] .plan-card:hover,
+html[data-style="brutal"] .album-card:hover {
+  transform: translate(-2px, -2px);
+}
+
+/* 徽标：粗野主义要的是一个实色方块，不是一枚带渐变的印章 */
+html[data-style="brutal"] .brand-mark {
+  background: var(--primary);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
 /* ---- 基础 ---- */
 * { box-sizing: border-box; }
 
@@ -1240,6 +1388,55 @@ button, input, textarea, select {
   background: color-mix(in srgb, var(--text) 82%, transparent);
   color: var(--bg);
 }
+
+/* ---- 界面风格选择器 ----
+   两个选项各自画出**自己那套材质**的样子，而不是"当前风格"的样子：
+   否则切到粗野主义之后，连"简约"那张预览图也会跟着变成方块，
+   用户就再也看不出这两者有什么区别了。
+   所以预览图里的圆角与硬影都是写死的，不随当前风格走。 */
+.style-picker {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  padding: 14px 0 4px;
+}
+@media (max-width: 640px) { .style-picker { grid-template-columns: 1fr; } }
+
+.style-opt {
+  display: flex; flex-direction: column; gap: 9px; align-items: stretch;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: var(--bw) solid var(--pane-edge);
+  background: var(--pane-card);
+  color: var(--text);
+  cursor: pointer; text-align: left;
+  box-shadow: var(--shadow-sm), var(--pane-hi);
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
+              border-color var(--dur) var(--ease);
+}
+.style-opt:hover { transform: translateY(-2px); }
+.style-opt.active { border-color: var(--primary); box-shadow: var(--shadow), var(--pane-hi); }
+.style-opt-preview { display: block; width: 100%; height: 38px; }
+.style-opt-name { font-size: var(--fs-sm); font-weight: 600; }
+.style-opt-desc { font-size: var(--fs-xs); color: var(--text-3); line-height: 1.7; }
+
+/* 简约：软的圆角、透的填充、一层散开的光晕 */
+.style-opt-preview.liquid {
+  border-radius: 12px;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--primary) 30%, var(--surface)) 0%,
+    var(--surface) 66%);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 9px 18px -9px rgba(16, 20, 30, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+/* 新粗野主义：直角、粗边、硬偏移影、平涂 */
+.style-opt-preview.brutal {
+  border-radius: 0;
+  background: var(--primary);
+  border: 2px solid var(--text);
+  box-shadow: 5px 5px 0 var(--text);
+}
+/* 粗野主义会把一切圆角压平（见上面的 * 规则），
+   但这两张预览图是"风格的样本"，必须各自保持自己的样子。 */
+html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }
 
 .backup-list { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; }
 .backup-item {

@@ -3,7 +3,7 @@
  */
 
 import { api } from '../api.js';
-import { store, THEME_OPTIONS } from '../store.js';
+import { store, THEME_OPTIONS, STYLE_OPTIONS } from '../store.js';
 import {
   esc,
   confirmDialog,
@@ -15,6 +15,13 @@ import {
 } from '../ui.js';
 import { refresh } from '../router.js';
 
+/**
+ * 外观风格的兜底值。
+ * 与 server/db.js 的 DEFAULT_SETTINGS.style、index.html 上的 data-style 必须是同一个，
+ * 否则老数据/老服务端下会出现"设置页高亮的是 A、界面实际是 B"。
+ */
+const DEFAULT_STYLE = STYLE_OPTIONS[0].id;
+
 // ===========================================================================
 // 各分区
 // ===========================================================================
@@ -23,6 +30,8 @@ function appearanceBlock(settings, backgrounds) {
   const images = backgrounds?.images ?? [];
   const current = String(settings.backgroundImage ?? '');
   const defaultImage = String(backgrounds?.defaultImage ?? '');
+  // 老版本服务端可能还没有 style 这一项，回落到默认值，别让整页炸掉
+  const currentStyle = String(settings.style ?? DEFAULT_STYLE);
 
   const thumbs = [
     `<button class="bg-thumb bg-thumb-none ${current ? '' : 'active'}" type="button"
@@ -72,10 +81,34 @@ function appearanceBlock(settings, backgrounds) {
 
       <div class="settings-row">
         <div>
+          <div class="s-label">界面风格</div>
+          <div class="s-desc">
+            两套不同的材质语言，切换即时生效。<br>
+            与主色调、深浅色互相独立，可以任意组合。
+          </div>
+        </div>
+        <div class="s-control"></div>
+      </div>
+
+      <div class="style-picker">
+        ${STYLE_OPTIONS.map(
+          (s) => `
+          <button class="style-opt ${currentStyle === s.id ? 'active' : ''}" type="button"
+                  data-style-pick="${esc(s.id)}" aria-pressed="${currentStyle === s.id}">
+            <span class="style-opt-preview ${esc(s.id)}"></span>
+            <span class="style-opt-name">${esc(s.name)}</span>
+            <span class="style-opt-desc">${esc(s.desc)}</span>
+          </button>`,
+        ).join('')}
+      </div>
+
+      <div class="settings-row">
+        <div>
           <div class="s-label">页面背景图</div>
           <div class="s-desc">
             选一张图垫在页面最底层，会以大约一半的透明度透出来。<br>
-            把图片放进项目里的 <span class="mono">img/background</span> 目录，这里就会自动列出来。
+            把图片放进项目里的 <span class="mono">img/background</span> 目录，这里就会自动列出来。<br>
+            <span class="muted">「新粗野主义」风格是平的，不看背景图；切回「简约」即恢复。</span>
           </div>
         </div>
         <div class="s-control">
@@ -355,6 +388,29 @@ export async function pageSettings() {
             root.querySelectorAll('[data-theme-pick]').forEach((d) =>
               d.classList.toggle('active', d === dot),
             );
+          } catch (err) {
+            toastError(err.message);
+          }
+        });
+      });
+
+      // 界面风格
+      root.querySelectorAll('[data-style-pick]').forEach((opt) => {
+        // 用闭包里的 opt，不碰 e.currentTarget——它在 await 之后会被置为 null
+        opt.addEventListener('click', async () => {
+          const next = opt.dataset.stylePick;
+          if (next === store.settings?.style) return;
+          try {
+            await store.setStyle(next);
+            // 状态以服务端回报的设置为准；aria-pressed 也一起同步，
+            // 因为它是一个真实的开关状态，不该只在视觉上高亮
+            root.querySelectorAll('[data-style-pick]').forEach((o) => {
+              const on = o.dataset.stylePick === store.settings.style;
+              o.classList.toggle('active', on);
+              o.setAttribute('aria-pressed', String(on));
+            });
+            const name = STYLE_OPTIONS.find((s) => s.id === store.settings.style)?.name;
+            toastSuccess(`界面风格已切成「${name}」`);
           } catch (err) {
             toastError(err.message);
           }

@@ -30,6 +30,7 @@ const EXPORT_DIRS = ['发布', '计划', '相册'];
 const EDITABLE = new Set([
   'theme',
   'colorMode',
+  'style',
   'backupEnabled',
   'backupTime',
   'backupKeep',
@@ -38,6 +39,17 @@ const EDITABLE = new Set([
 
 /** 允许的主题主色调 */
 export const THEMES = ['akane', 'amber', 'jade', 'azure', 'violet', 'graphite'];
+
+/**
+ * 允许的外观风格。
+ *
+ * 这两个值对应 app.css 里的两套材质语言（html[data-style="…"]）：
+ *   liquid —— 简约：半透玻璃、柔和的圆角与阴影、底下一片光场
+ *   brutal —— 新粗野主义：实色块面、直角、粗边、硬偏移影
+ * 名字用英文枚举而不是直接写中文，是为了让 CSS、接口、数据库三处用的是同一组值，
+ * 中文名只出现在界面文案里（见 store.js 的 STYLE_OPTIONS）。
+ */
+export const STYLES = ['liquid', 'brutal'];
 
 function validateSettingsPatch(patch) {
   const out = {};
@@ -49,6 +61,9 @@ function validateSettingsPatch(patch) {
     }
     if (key === 'colorMode' && !['light', 'dark'].includes(value)) {
       throw badRequest('明暗模式只能是 light 或 dark');
+    }
+    if (key === 'style' && !STYLES.includes(value)) {
+      throw badRequest(`外观风格只能是：${STYLES.join(' / ')}`);
     }
     if (key === 'backupEnabled' && !['true', 'false'].includes(value)) {
       throw badRequest('backupEnabled 只能是 true 或 false');
@@ -95,6 +110,7 @@ export function mountSettingsRoutes(router, ctx) {
         port: config.port,
         projectRoot: PROJECT_ROOT,
         themes: THEMES,
+        styles: STYLES,
         // 开机自启的真实状态（读自启动文件夹，不是数据库）
         autoStart: getAutostart(),
       },
