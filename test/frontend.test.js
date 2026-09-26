@@ -58,8 +58,12 @@ test('前端 · index.html 引用的资源都存在', async (t) => {
   assert.ok(refs.length >= 2, 'index.html 至少应引用样式表与入口脚本');
 
   for (const ref of refs) {
-    const abs = path.join(PUBLIC_DIR, ref.replace(/^\//, ''));
-    assert.ok(fs.existsSync(abs), `index.html 引用了不存在的资源：${ref}`);
+    // 两套资源通道（与 server/http.js 的路由一致）：
+    //   /img/*  → 项目自带资源（logo、背景图），根目录是 img/
+    //   其余    → 前端静态文件，根目录是 public/
+    const root = ref.startsWith('/img/') ? PROJECT_ROOT : PUBLIC_DIR;
+    const abs = path.join(root, ref.replace(/^\//, ''));
+    assert.ok(fs.existsSync(abs), `index.html 引用了不存在的资源：${ref}（解析为 ${abs}）`);
   }
 
   // 关键元素与属性

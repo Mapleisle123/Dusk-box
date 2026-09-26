@@ -90,7 +90,43 @@ function installGlobalHandlers() {
   });
 }
 
+/**
+ * 页面 logo。
+ *
+ * 图片来自 img/logo（见 index.html）。这里只管两件事：
+ *   - 加载成功 → 给印章打上 has-logo，让底下的印章底纹与三道横线让位；
+ *   - 加载失败 → 把图片移除，退回纯 CSS 画的印章。
+ *
+ * 之所以要写失败分支：logo 是用户自己往目录里放的图，
+ * 换名字、删掉、放成损坏文件都是可能的，那时侧栏不该出现一个破图图标。
+ */
+function setupBrandLogo() {
+  const logo = document.querySelector('.brand-logo');
+  if (!logo) return;
+  const mark = logo.parentElement;
+
+  /** 退回印章：撤掉 has-logo（否则印章已被关掉、会留下空框），再把 <img> 拿掉 */
+  const showSeal = () => {
+    mark.classList.remove('has-logo');
+    logo.remove();
+  };
+
+  // 失败处理先挂上，而不是挂在 load 分支里：
+  // 图加载成功之后仍然可能失效（换了文件、文件被删），那时也该退回印章。
+  logo.addEventListener('error', showSeal, { once: true });
+
+  // 图片可能已经加载完了（命中内存缓存），此时不会再触发 load 事件
+  if (logo.complete) {
+    if (logo.naturalWidth > 0) mark.classList.add('has-logo');
+    else showSeal();
+    return;
+  }
+
+  logo.addEventListener('load', () => mark.classList.add('has-logo'), { once: true });
+}
+
 async function bootstrap() {
+  setupBrandLogo();
   installGlobalHandlers();
 
   try {

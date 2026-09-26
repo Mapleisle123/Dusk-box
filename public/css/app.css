@@ -254,7 +254,8 @@ button, input, textarea, select {
   padding: 0 var(--space-3) var(--space-6);
 }
 
-/* 印章：方圆形 + 朱色底 + 三道横线（"箱"的意象），略微内凹的质感 */
+/* 印章：方圆形 + 朱色底 + 三道横线（"箱"的意象），略微内凹的质感。
+   这套样式同时也是**兜底**——img/logo 里的图片缺失时会退回它。 */
 .brand-mark {
   width: 32px; height: 32px; border-radius: 9px;
   background: linear-gradient(160deg,
@@ -276,6 +277,22 @@ button, input, textarea, select {
   mask: linear-gradient(to right, transparent 0 30%, #000 30% 70%, transparent 70%);
   -webkit-mask: linear-gradient(to right, transparent 0 30%, #000 30% 70%, transparent 70%);
 }
+
+/* ---- 页面 logo ----
+   图片铺满印章那个 32px 方框，圆角与印章保持一致。
+   图片本就在印章底纹之上，但印章那三道横线是伪元素、会画在图片上层，
+   所以加载成功后由 main.js 打上 has-logo，把它们让开（否则白线会压在画面上）。 */
+.brand-logo {
+  display: block;
+  width: 100%; height: 100%;
+  border-radius: 9px;
+  object-fit: cover;
+}
+.brand-mark.has-logo {
+  background: none;
+  box-shadow: var(--shadow-sm);
+}
+.brand-mark.has-logo::after { display: none; }
 
 .brand-text { display: flex; flex-direction: column; line-height: 1.3; }
 .brand-name {

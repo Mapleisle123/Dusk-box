@@ -12,7 +12,11 @@
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
-      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-mark" aria-hidden="true">
+        <!-- 页面 logo：图片放在 img/logo 里。
+             万一文件缺失，main.js 会把它移除并退回纯 CSS 画的印章，不会出现破图。 -->
+        <img class="brand-logo" src="/img/logo/logo.jpg" alt="" decoding="async">
+      </span>
       <span class="brand-text">
         <span class="brand-name">茜色箱</span>
         <span class="brand-sub">生活日志</span>
