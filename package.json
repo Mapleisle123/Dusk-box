@@ -1,0 +1,15 @@
+{
+  "name": "qiansexiang",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "茜色箱 · 只在本地运行的个人生活日志应用",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node --test --test-reporter=spec \"test/*.test.js\""
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

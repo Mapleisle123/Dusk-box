@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="akane" data-mode="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>茜色箱</title>
+<link rel="stylesheet" href="/css/app.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23B7282E'/><path d='M8 11h16M8 16h16M8 21h10' stroke='white' stroke-width='2.4' stroke-linecap='round'/></svg>">
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-text">
+        <span class="brand-name">茜色箱</span>
+        <span class="brand-sub">生活日志</span>
+      </span>
+    </div>
+
+    <nav class="nav" id="nav">
+      <div class="nav-label">记录</div>
+      <a class="nav-item" href="#/home" data-route="home">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8.5 10 3l7 5.5V16a1 1 0 0 1-1 1h-4v-5H8v5H4a1 1 0 0 1-1-1V8.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <span>首页</span>
+      </a>
+      <a class="nav-item" href="#/posts" data-route="posts">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3h7l4 4v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 3v4h4M7 11h6M7 14h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>发布</span>
+      </a>
+      <div class="nav-label">整理</div>
+      <a class="nav-item" href="#/plans" data-route="plans">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3.5" y="4.5" width="13" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 8h13M7 3v3M13 3v3M7.5 11.5l1.5 1.5 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>计划</span>
+      </a>
+      <a class="nav-item" href="#/albums" data-route="albums">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="5" width="14" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 12.5 7 9l4 3.5 2.5-2 3.5 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="7.5" cy="8" r="1.2" fill="currentColor"/></svg>
+        <span>相册</span>
+      </a>
+      <div class="nav-label">其他</div>
+      <a class="nav-item" href="#/settings" data-route="settings">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="2.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span>设置</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span class="status-dot" id="service-dot"></span>
+      <span class="status-text" id="service-text">连接中…</span>
+    </div>
+  </aside>
+
+  <main class="main" id="view" aria-live="polite"></main>
+</div>
+
+<div class="modal-root" id="modal-root"></div>
+<div class="toast-root" id="toast-root"></div>
+<div class="loading-bar" id="loading-bar"></div>
+
+<script type="module" src="/js/main.js"></script>
+</body>
+</html>

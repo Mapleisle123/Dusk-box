@@ -1,0 +1,45 @@
+# ── 行尾与编码策略 ────────────────────────────────────────────────
+# 本项目为 Node/JS 应用，所有文本文件统一以 LF 存储、以 LF 检出。
+# 注意：本机全局 core.autocrlf=true。若不在此显式声明，git 会在检出时
+# 把源码改写为 CRLF，导致工作区凭空变脏、diff 噪音不断。故显式固定为 LF。
+#
+# 默认规则：按内容自动识别文本/二进制，凡文本一律归一化为 LF。
+# （下列具体规则按顺序覆盖本行。）
+*        text=auto eol=lf
+
+.gitignore      text eol=lf
+.gitattributes  text eol=lf
+
+*.js     text eol=lf
+*.mjs    text eol=lf
+*.cjs    text eol=lf
+*.json   text eol=lf
+*.css    text eol=lf
+*.html   text eol=lf
+*.md     text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.txt    text eol=lf
+
+# ── 批处理文件：禁止任何文本转换（重要）──────────────────────────
+# cmd.exe 依赖 CRLF 分行；且下列 .bat 以 GBK(936) 编码保存中文。
+# 若被归一化为 LF，双击将直接闪退（此前已实际踩过此坑）。
+# -text = git 不做文本转换，按字节原样存取，确保 CRLF + GBK 不被破坏。
+*.bat    -text
+*.cmd    -text
+
+# ── 二进制文件（避免被误判为文本而做行尾转换）────────────────────
+*.db       binary
+*.db-shm   binary
+*.db-wal   binary
+*.zip      binary
+*.7z       binary
+*.rar      binary
+*.jpg      binary
+*.jpeg     binary
+*.png      binary
+*.gif      binary
+*.webp     binary
+*.ico      binary
+*.woff     binary
+*.woff2    binary
