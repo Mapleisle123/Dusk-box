@@ -1,5 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="akane" data-mode="light">
+<!-- 三个外观维度各自独立，可以任意组合：
+       data-theme  主色调        data-mode  深浅色        data-style  外观风格
+     data-style="liquid" 是默认的"液态玻璃"，先把默认值写死在 HTML 上，
+     这样即使脚本还没跑起来（或服务没连上），第一帧就已经是最终的材质，
+     不会先闪一下无样式的裸页面。 -->
+<html lang="zh-CN" data-theme="akane" data-mode="light" data-style="liquid">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">

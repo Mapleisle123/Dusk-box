@@ -1,22 +1,31 @@
 /* ==========================================================================
    茜色箱 · 样式
-   主题通过 html[data-theme] 切换主色调，html[data-mode] 切换深浅色。
+   主题通过 html[data-theme] 切换主色调，html[data-mode] 切换深浅色，
+   html[data-style] 切换整体外观风格。
 
-   设计取向：它是一只"箱子"，里面装的是纸。
-   所以整个界面应该像一本摊开的日记本，而不是一块控制面板。
-   具体落在四件事上：
-     1. 纸  —— 暖白纸底 + 极淡的茜色晕染 + 几乎看不见的纸纹
-     2. 字  —— 标题/日期/数字走宋体（衬线），正文走黑体，形成真正的层级
-     3. 层  —— 卡片用双层柔和阴影托起，而不是靠 1px 描边切割
-     4. 节  —— 统一的缓动与入场，让界面"呼吸"而不是瞬间跳变
+   设计取向：这是一间"个人工作与生活控制中心"。
+   参考的是最新版 macOS 原生应用的材质语言——液态玻璃（Liquid Glass）：
+     1. 光场 —— 背景不是一块纸，而是一片有颜色的光，安静、抽象、无具象物
+     2. 玻璃 —— 侧栏与内容区是两层浮起来的玻璃面板，能透、能折、带高光边
+     3. 层级 —— 面板之上再叠卡片，靠"透出来的底"和"边缘的亮线"区分远近，
+                 而**不是**靠一根根深色描边去切割（那是纸的做法）
+     4. 反馈 —— 按下要沉、悬停要浮、切换要有弹性，界面得"接得住手"
+   注意：只借材质与层级，不借题材。背景里不该出现天空、云、日月星、
+   雨雪、山川、城市之类的具象景观——它是打光，不是风景。
+
+   实现上的骨架没变：所有视觉都由下面 :root 里的令牌派生，
+   组件只引用令牌、不写死颜色。换主题、切深浅色、换风格，
+   只要换一层令牌，整套界面跟着走。
    ========================================================================== */
 
 :root {
-  /* ---- 形状与节奏 ---- */
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
+  /* ---- 形状与节奏 ----
+     液态玻璃的圆角比"纸"更连续、更饱满：面板是一整块，卡片是嵌在里面的一小块，
+     所以两级之间要留出足够的差值，层级才读得出来。 */
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -26,18 +35,24 @@
   --space-7: 44px;
   --space-8: 60px;
 
-  /* ---- 字体 ---- */
-  --font-sans: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB",
-               -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --font-serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong",
-                "SimSun", Georgia, "Times New Roman", serif;
-  --font-mono: ui-monospace, "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+  /* ---- 字体 ----
+     原生应用用的是系统字。把系统字族排在最前，Windows 上退到微软雅黑，
+     这样在 mac 上是 SF/PingFang，在 Windows 上也是各自系统里最正经的那套。
+     --font-display 给标题与数字用：同一族，但靠字重与字距拉开层级
+     （衬线体是上一版"日记本"的语汇，这次不用了）。 */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue",
+               "PingFang SC", "Hiragino Sans GB", "HarmonyOS Sans SC",
+               "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC",
+               "Segoe UI", system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue",
+                  "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI",
+                  "Microsoft YaHei", "Noto Sans SC", "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
   /* --font 保留为正文族，历史上一直被 body 与 textarea 引用 */
   --font: var(--font-sans);
 
   /* ---- 字号阶梯 ----
-     整体往上抬了约 1px：原来的字号偏小，长时间看日志类文字会累。
-     各档之间保持明确间距，越大越疏，避免"挤在一起没有层级"。
+     整体保持在"日志类文字长时间看不累"的尺度上，各档间距明确。
      除固定尺寸图形内部的小字（见文件末尾说明），所有文字都应走这套变量。 */
   --fs-xs: 12.5px;
   --fs-sm: 14px;
@@ -46,19 +61,29 @@
   --fs-lg: 18.5px;
   --fs-xl: 22px;
   --fs-2xl: 30px;
-  --fs-display: 36px;
+  --fs-display: 40px;
 
-  /* ---- 纸 ---- */
-  --bg: #F6F2EA;
-  --bg-deep: #EFE9DE;
-  --surface: #FFFDF9;
-  --surface-2: #F3EEE4;
-  --surface-3: #E9E2D5;
-  --border: rgba(58, 44, 32, 0.10);
-  --border-strong: rgba(58, 44, 32, 0.20);
-  --text: #241F19;
-  --text-2: #6B5F52;
-  --text-3: #9B8F81;
+  /* ---- 光场（底色）----
+     冷调中性底，像一块被均匀照亮的毛玻璃背板。
+     彩度全部交给上面的主题晕染，底色必须保持中性——
+     底色一旦自己带色，与主题色叠加就会串味。 */
+  --bg: #E9ECF3;
+  --bg-deep: #DCE0E9;
+  --surface: #FFFFFF;
+  --surface-2: #F1F3F8;
+  --surface-3: #E3E7EF;
+  --border: rgba(18, 22, 32, 0.10);
+  --border-strong: rgba(18, 22, 32, 0.20);
+  --text: #14171E;
+  /* 次级/三级文字：浅色下原来定在 #565C68 / #7B8393，压在白底上分别是 6.7 / 3.8，
+     而三级那档真正压在玻璃卡片上只有 3.3 —— 说明文字、元信息、辅助提示都偏浅。
+     上一版只把 3:1 当作浅色的底线（当时的备注是"这次不做改动"）；
+     这次是完整重构，就一并提到与深色同样的标准：**在合成之后的玻璃底上也要到 AA**。
+     注意 #7B8393 这类中灰永远到不了 4.5：中灰在白底上的对比度上限就是 3.81，
+     所以唯一的出路是加深，而不是把玻璃调亮。
+     现值压在卡片合成底（约 #EEEDEF）上：--text-2 约 6.7:1，--text-3 约 5.0:1。 */
+  --text-2: #4A5260;
+  --text-3: #5F6673;
   --on-primary: #FFFFFF;
 
   /* ---- 强调色（超额/达成，暖琥珀） ---- */
@@ -66,28 +91,110 @@
   --accent-soft: #FBF0DC;
   --accent-text: #7A4A05;
 
-  --success: #1B8F6B;
-  --success-soft: #E4F4EE;
-  --success-text: #0B5A42;
+  --success: #12805F;
+  --success-soft: #E0F3EC;
+  --success-text: #0A5540;
 
   --danger: #BC3A2B;
-  --danger-soft: #FAEBE8;
+  --danger-soft: #FBEAE7;
   --danger-text: #8A2718;
 
-  /* ---- 阴影：两层柔和，避免单层灰雾 ---- */
-  --shadow-sm: 0 1px 2px rgba(74, 54, 36, 0.05), 0 1px 1px rgba(74, 54, 36, 0.03);
-  --shadow: 0 2px 4px rgba(74, 54, 36, 0.04), 0 10px 22px -10px rgba(74, 54, 36, 0.16);
-  --shadow-lg: 0 6px 16px -6px rgba(74, 54, 36, 0.14), 0 30px 60px -20px rgba(74, 54, 36, 0.26);
-  --shadow-press: inset 0 1px 2px rgba(74, 54, 36, 0.10);
+  /* ---- 玻璃材质 ----
+     这一组是本次重构的核心。三种厚度，对应三种"离背景的远近"：
+       --pane       侧栏与浮层，最厚，最不透明
+       --pane-2     内容区面板
+       --pane-card  面板里的卡片
 
-  /* ---- 动效 ---- */
-  --ease: cubic-bezier(0.22, 0.68, 0.32, 1);
-  --dur: 0.18s;
+     为什么用 color-mix + 变量而不是写死 rgba：
+     颜色取自 --surface，所以换主题、切深浅色时玻璃会自己跟着变，
+     不会留下一层"上个主题的玻璃"。
 
-  /* ---- 纸的晕染：由主色派生，主题一变氛围跟着变 ---- */
-  --glow: color-mix(in srgb, var(--primary, #B7282E) 6%, transparent);
-  --glow-2: color-mix(in srgb, var(--primary, #B7282E) 3%, transparent);
-  --grain-opacity: 0.03;
+     为什么浅色要比深色厚这么多（52~74% vs 34~58%）：
+     因为浅色的文字是深的，它怕的是"背景太暗"；而深色模式下照片的亮部
+     已经被 --bg-dim 压住了，浅色模式没有对应的那一层。
+
+     厚度是怎么定下来的（下面这条曲线是实测的，不是估的）：
+     拿"内容区面板"当自变量，量页头副标题（--text-2）压在同一张照片上的对比度
+     （1440×950 真实像素，同一位置，先关掉自动弹出的提醒弹窗再量）：
+
+         面板不透明度   副标题对比度   纯黑底下的对比度
+            30%           6.37:1          1.04:1
+            48%           6.76:1          1.86:1
+            56%           6.93:1          2.47:1
+            74%           7.33:1          4.19:1
+
+     这张表要连着读两遍，因为它否掉了两个想当然的结论：
+
+     一是"对比度不够就把玻璃加厚"——在这张真实照片上，玻璃薄到 30%
+     也还有 6.37:1，远在 AA 之上；厚度从 30% 拉到 74%，对比度只动了不到 1。
+     厚度根本不是这一处的瓶颈。
+
+     二是"厚到某个程度就能保证任意照片都达标"——照片换成纯黑时，
+     玻璃加到 74% 也才 4.19:1，仍然不到 AA。**再厚也买不到这个保证。**
+     要真保证，只能把面板做成近乎不透明的实心板，那玻璃就没了。
+     所以这里不追求"任意照片都达标"，而是取一个折中：
+     在当前这张照片上有 6.9:1 以上的余量，同时扛得住偏暗的照片。
+
+     那 74/56/66 这个分配是怎么来的：**文字越密的地方越厚。**
+     侧栏挤满了小字标签（--pane 74%），卡片里是正文（--pane-card 66%），
+     内容区面板主要衬着页头那一行字（--pane-2 56%，最薄、最透）。
+     这样既保住了文字，又把"透"留给了最该透的那一层。
+
+     顺带记一个坑：这一版最初把内容区面板加厚到 56%，
+     理由是一个"副标题只有 4.05:1"的实测值——那个值是错的。
+     当时计划页自动弹出了"今天的计划"提醒，那层 .modal-backdrop
+     是 60% 不透明的灰纱还盖满视口，量到的其实是"弹窗态的对比度"。
+     **量对比度之前，先确认屏幕上没有别的东西。**
+     关掉弹窗后同一个位置是 6.9:1，从来就没有不够过。
+
+     --pane-edge 是玻璃的边：一道比周围更亮的细线，
+     它模拟的是玻璃边缘捕到光的那一下——玻璃的"存在感"有八成来自这条线，
+     比阴影更管用。
+     --pane-hi 是内顶部的镜面高光，同样只在玻璃顶部出现。 */
+  --pane: color-mix(in srgb, var(--surface) 74%, transparent);
+  --pane-2: color-mix(in srgb, var(--surface) 56%, transparent);
+  --pane-card: color-mix(in srgb, var(--surface) 66%, transparent);
+  --pane-edge: rgba(255, 255, 255, 0.66);
+  --pane-hi: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --pane-blur: 28px;
+  --pane-blur-soft: 16px;
+  --pane-sat: 180%;
+
+  /* 边框宽度：玻璃用 1px 细边，风格切换时由后面覆盖成粗边 */
+  --bw: 1px;
+
+  /* ---- 阴影：分层柔和，越远越散 ----
+     玻璃的立体感来自"大面积、低透明度、无硬边"的投影，
+     而不是一圈深色描边。 */
+  --shadow-sm: 0 1px 2px rgba(16, 20, 30, 0.06), 0 1px 1px rgba(16, 20, 30, 0.04);
+  --shadow: 0 2px 6px rgba(16, 20, 30, 0.06), 0 12px 28px -12px rgba(16, 20, 30, 0.18);
+  --shadow-lg: 0 8px 20px -8px rgba(16, 20, 30, 0.16), 0 36px 70px -24px rgba(16, 20, 30, 0.28);
+  --shadow-press: inset 0 1px 3px rgba(16, 20, 30, 0.12);
+
+  /* ---- 动效 ----
+     --ease 是"克制"曲线：起步快、收尾长，像物体带惯性停下，原生感就来自这里。
+     --ease-spring 只给"状态翻转"用（开关、勾选），允许轻微过冲。 */
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.42, 0.5, 1);
+  --dur: 0.2s;
+
+  /* ---- 光场的颜色：由主色派生，主题一变氛围跟着变 ----
+     三层不同强度的晕染，分布在不同角落，叠出一片有明暗过渡的光，
+     这样玻璃面板压上去才有东西可"折"。
+
+     强度不能太含蓄：面板本身有 56% 的不透明度，如果光场只有几个色阶的起伏，
+     透上来之后就什么都看不出来了——玻璃会变成一块白板。
+     实测（关掉背景图后九点取样，1440×950）：
+     强度在 10% 上下时，光场自己的明暗跨度只有 0.09，压上玻璃后基本读不出过渡；
+     提到现在这一档是 0.158，透过面板仍有 0.19 的跨度。
+
+     一并记下：换面板厚度几乎改不动这个跨度（30%~74% 全在 0.18~0.20 之间），
+     所以"光场看不看得出来"由它自己的强度决定，不要指望靠调玻璃厚度去救。
+     真正让玻璃像玻璃的是这三样：底下有光、边上有一道亮线、中间有模糊。 */
+  --glow: color-mix(in srgb, var(--primary, #B7282E) 22%, transparent);
+  --glow-2: color-mix(in srgb, var(--primary, #B7282E) 15%, transparent);
+  --glow-3: color-mix(in srgb, var(--primary, #B7282E) 11%, transparent);
+  --grain-opacity: 0.028;
 
   /* ---- 页面背景图 ----
      --bg-photo 由 JS 按设置写入（形如 url("/img/background/x.jpg")）；
@@ -108,48 +215,59 @@ html[data-theme="azure"]    { --primary: #2F7FD1; --primary-hover: #2569AE; --pr
 html[data-theme="violet"]   { --primary: #7F77DD; --primary-hover: #655CC9; --primary-soft: #EEEDFE; --primary-soft-2: #F6F5FE; }
 html[data-theme="graphite"] { --primary: #5F5E5A; --primary-hover: #4A4945; --primary-soft: #EFEDEA; --primary-soft-2: #F7F6F4; }
 
-/* ---- 深色模式：暖炭灰，不是纯黑 ---- */
+/* ---- 深色模式：暖炭灰，不是纯黑 ----
+     纯黑上的玻璃会失去"厚度"——因为没有底光可透，玻璃看起来就是一块黑洞。
+     所以底色要保持一点点亮度，让玻璃边缘的高光有东西可对比。 */
 html[data-mode="dark"] {
-  --bg: #16140F;
-  --bg-deep: #100E0A;
-  --surface: #201D18;
-  --surface-2: #292521;
-  --surface-3: #34302A;
-  --border: rgba(255, 250, 240, 0.10);
-  --border-strong: rgba(255, 250, 240, 0.22);
-  --text: #F2EDE4;
+  --bg: #14161A;
+  --bg-deep: #0E1013;
+  --surface: #1E2127;
+  --surface-2: #262A31;
+  --surface-3: #31363F;
+  --border: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.22);
+  --text: #F0F2F6;
   /* 次级/三级文字：原来 #B3A99B / #857B6D 偏暗，"说明文字发灰看不清"。
      现在压到任何一层底色上都满足 WCAG AA（4.5:1），最浅的 surface-3 上也不例外。 */
-  --text-2: #CFC6B8;
-  --text-3: #B0A595;
+  --text-2: #C4CAD6;
+  --text-3: #A2AAB8;
 
   --accent: #E0A03C;
-  --accent-soft: #362A14;
+  --accent-soft: #33280F;
   --accent-text: #F2C87D;
 
   --success: #4CC49A;
-  --success-soft: #14302A;
+  --success-soft: #122E28;
   --success-text: #8FE0C1;
 
   --danger: #E8735F;
-  --danger-soft: #38201C;
+  --danger-soft: #35201C;
   --danger-text: #F5A694;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.34);
-  --shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 10px 22px -10px rgba(0, 0, 0, 0.55);
-  --shadow-lg: 0 6px 16px -6px rgba(0, 0, 0, 0.5), 0 30px 60px -20px rgba(0, 0, 0, 0.7);
-  --shadow-press: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+  /* 深色下玻璃要更淡：底本来就暗，再厚就看不见"透"了。
+     边缘反而要更含蓄——纯白细线在暗底上会显得廉价。 */
+  --pane: color-mix(in srgb, var(--surface) 58%, transparent);
+  --pane-2: color-mix(in srgb, var(--surface) 34%, transparent);
+  --pane-card: color-mix(in srgb, var(--surface) 52%, transparent);
+  --pane-edge: rgba(255, 255, 255, 0.12);
+  --pane-hi: inset 0 1px 0 rgba(255, 255, 255, 0.10);
 
-  --glow: color-mix(in srgb, var(--primary, #D9565C) 11%, transparent);
-  --glow-2: color-mix(in srgb, var(--primary, #D9565C) 5%, transparent);
-  --grain-opacity: 0.05;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 2px 6px rgba(0, 0, 0, 0.34), 0 14px 30px -14px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 10px 24px -10px rgba(0, 0, 0, 0.55), 0 40px 80px -28px rgba(0, 0, 0, 0.75);
+  --shadow-press: inset 0 1px 3px rgba(0, 0, 0, 0.5);
 
-  /* 背景图的压暗层：图片本身没法"调暗"，所以在图上再压一层纸色。
-     浅色模式下不需要（纸色比图亮，压上去只会更糊），深色下必须压——
+  --glow: color-mix(in srgb, var(--primary, #D9565C) 18%, transparent);
+  --glow-2: color-mix(in srgb, var(--primary, #D9565C) 12%, transparent);
+  --glow-3: color-mix(in srgb, var(--primary, #D9565C) 8%, transparent);
+  --grain-opacity: 0.045;
+
+  /* 背景图的压暗层：图片本身没法"调暗"，所以在图上再压一层底色。
+     浅色模式下不需要（底色比图亮，压上去只会更糊），深色下必须压——
      否则一张明亮的照片会把压在它上面的文字拉垮：
      页头副标题实测一度只剩 1.4:1，几乎看不清。
      75% 是按 WCAG 算出来并实测校准过的剂量：把图片最亮的像素压到约 51，
-     页头最弱的那级文字（--text-3）也能达到 AA。
+     页头最弱的那级文字也能达到 AA。
      实测（1440×900，真实像素采样）：页头副标题从压暗前的 1.37:1
      提到 4.8:1 上下，标题在 9:1 以上。再低就不够了，别随手调小。 */
   --bg-dim: color-mix(in srgb, var(--bg) 75%, transparent);
@@ -174,10 +292,13 @@ html, body {
 body {
   font-family: var(--font);
   background-color: var(--bg);
-  /* 纸的氛围：左上角一片茜色晕染，右下角一片更淡的，像被光斜照过的纸 */
+  /* 光场：三片不同强度、不同角落的主题色晕染。
+     它们只是照明，不是景物——所以没有地平线、没有渐变方向、
+     也没有任何可辨认的形状，只有从亮到无的衰减。 */
   background-image:
-    radial-gradient(880px 430px at 4% -14%, var(--glow), transparent 62%),
-    radial-gradient(720px 400px at 102% 0%, var(--glow-2), transparent 58%);
+    radial-gradient(1180px 780px at 6% -14%, var(--glow), transparent 62%),
+    radial-gradient(1020px 720px at 104% 2%, var(--glow-2), transparent 60%),
+    radial-gradient(880px 880px at 58% 116%, var(--glow-3), transparent 66%);
   background-attachment: fixed;
   color: var(--text);
   font-size: var(--fs-base);
@@ -186,7 +307,10 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* 纸纹：极淡的噪点，只为消除"数字界面过于干净"的塑料感 */
+/* 颗粒：极淡的噪点。
+   平滑渐变在真屏上容易出现色带（banding），一层噪点能把它打散；
+   同时它也让玻璃有"磨砂"的质感，而不是一块数字化的清水。
+   z-index: -1 让它落在内容之下——玻璃面板会把它一起模糊掉，这是想要的效果。 */
 body::before {
   content: "";
   position: fixed;
@@ -198,20 +322,23 @@ body::before {
 }
 
 /* ---- 页面背景图 ----
-   图层自下而上：背景图 → 压暗层 → 半透明底色纱 → 主题晕染。
+   图层自下而上：背景图 → 压暗层 → 半透明底色纱 → 主题晕染（三片）。
    纱（--bg-veil = 底色 50%）负责把图片压成"半透"；
    压暗层（--bg-dim）只在深色模式下起作用，见 dark 块里的说明。
-   两层的颜色都取自 --bg，所以换主题、切深浅色时氛围跟着一起变。 */
+   两层的颜色都取自 --bg，所以换主题、切深浅色时氛围跟着一起变。
+   启用背景图后，玻璃面板正好压在这张图上——这是这套材质最好看的时候：
+   面板边缘的高光会跟着图片的明暗走。 */
 html[data-bg="on"] body {
   background-image:
-    radial-gradient(880px 430px at 4% -14%, var(--glow), transparent 62%),
-    radial-gradient(720px 400px at 102% 0%, var(--glow-2), transparent 58%),
+    radial-gradient(1180px 780px at 6% -14%, var(--glow), transparent 62%),
+    radial-gradient(1020px 720px at 104% 2%, var(--glow-2), transparent 60%),
+    radial-gradient(880px 880px at 58% 116%, var(--glow-3), transparent 66%),
     linear-gradient(var(--bg-veil), var(--bg-veil)),
     linear-gradient(var(--bg-dim), var(--bg-dim)),
     var(--bg-photo);
-  background-size: auto, auto, auto, auto, cover;
-  background-position: left top, right top, center center, center center, center center;
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+  background-size: auto, auto, auto, auto, auto, cover;
+  background-position: left top, right top, center bottom, center center, center center, center center;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
   background-attachment: fixed;
 }
 
@@ -222,8 +349,10 @@ html[data-bg="on"] body {
 ::placeholder { color: var(--text-3); opacity: 1; }
 
 h1, h2, h3, h4 { margin: 0; font-weight: 600; }
-h1 { font-size: var(--fs-xl); font-family: var(--font-serif); letter-spacing: 0.01em; }
-h2 { font-size: var(--fs-lg); font-family: var(--font-serif); }
+/* 标题走 display 族 + 负字距：这是"原生精致感"里最廉价也最有效的一招——
+   字号越大，字距越要收紧，否则大字会显得松散、业余。 */
+h1 { font-size: var(--fs-xl); font-family: var(--font-display); letter-spacing: -0.02em; }
+h2 { font-size: var(--fs-lg); font-family: var(--font-display); letter-spacing: -0.015em; }
 h3 { font-size: var(--fs-base); }
 p { margin: 0; }
 a { color: inherit; text-decoration: none; }
@@ -237,36 +366,57 @@ button, input, textarea, select {
 :focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 ::-webkit-scrollbar { width: 11px; height: 11px; }
 ::-webkit-scrollbar-track { background: transparent; }
+/* 滚动条做成半透明的——玻璃面板上不该出现一根实心灰条 */
 ::-webkit-scrollbar-thumb {
-  background: var(--surface-3);
+  background: color-mix(in srgb, var(--text) 20%, transparent);
   border-radius: 8px;
   border: 3px solid transparent;
   background-clip: content-box;
 }
-::-webkit-scrollbar-thumb:hover { background: var(--text-3); background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text) 34%, transparent);
+  background-clip: content-box;
+}
 
-/* ---- 布局 ---- */
-.app { display: flex; height: 100vh; overflow: hidden; }
+/* ---- 布局：两层玻璃 ----
+   应用本体不再是"一块铺满的底板"，而是一层浮起来的面板：
+   四周留出边距，让底下的光场从边缘透出来——这一圈缝隙是关键，
+   它让界面看起来"悬浮"在光上，而不是把光整个盖住。 */
+.app {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  gap: 10px;
+  padding: 10px;
+}
 
+/* 侧栏：最厚的一层玻璃。
+   顶部加一道渐隐的镜面反光，模拟玻璃上沿捕到的光。 */
 .sidebar {
-  width: 218px;
-  flex: 0 0 218px;
-  /* 侧栏比纸略深一档，像书的封面 */
-  background: linear-gradient(180deg, var(--surface) 0%, var(--bg-deep) 100%);
-  border-right: 1px solid var(--border);
+  width: 222px;
+  flex: 0 0 222px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 26%, transparent) 0%, transparent 40%),
+    var(--pane);
+  border: var(--bw) solid var(--pane-edge);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg), var(--pane-hi);
+  -webkit-backdrop-filter: blur(var(--pane-blur)) saturate(var(--pane-sat));
+  backdrop-filter: blur(var(--pane-blur)) saturate(var(--pane-sat));
   display: flex;
   flex-direction: column;
-  padding: var(--space-6) var(--space-3) var(--space-3);
+  padding: var(--space-5) var(--space-3) var(--space-3);
+  overflow: hidden;
 }
 
 .brand {
   display: flex; align-items: center; gap: 11px;
-  padding: 0 var(--space-3) var(--space-6);
+  padding: 0 var(--space-3) var(--space-5);
 }
 
 /* 印章：方圆形 + 朱色底 + 三道横线（"箱"的意象），略微内凹的质感。
@@ -311,15 +461,15 @@ button, input, textarea, select {
 
 .brand-text { display: flex; flex-direction: column; line-height: 1.3; }
 .brand-name {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--fs-lg);
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.02em;
 }
 .brand-sub {
   font-size: var(--fs-xs);
   color: var(--text-3);
-  letter-spacing: 0.22em;
+  letter-spacing: 0.14em;
 }
 
 .nav { display: flex; flex-direction: column; gap: 2px; }
@@ -328,7 +478,7 @@ button, input, textarea, select {
 .nav-label {
   font-size: var(--fs-xs);
   color: var(--text-3);
-  letter-spacing: 0.2em;
+  letter-spacing: 0.14em;
   padding: var(--space-4) var(--space-3) var(--space-1);
 }
 .nav-label:first-child { padding-top: 0; }
@@ -340,23 +490,23 @@ button, input, textarea, select {
   border-radius: var(--radius-sm);
   color: var(--text-2);
   font-size: var(--fs-sm);
-  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease),
+              box-shadow var(--dur) var(--ease);
 }
 .nav-item svg { width: 18px; height: 18px; flex: 0 0 auto; opacity: 0.85; }
-.nav-item:hover { background: color-mix(in srgb, var(--surface-2) 70%, transparent); color: var(--text); }
+.nav-item:hover {
+  background: color-mix(in srgb, var(--surface) 42%, transparent);
+  color: var(--text);
+}
+/* 选中态：一块实心的圆角药丸 + 一层极浅的投影。
+   原生侧栏就是这么表达"你在哪"的——靠一块更亮的玻璃，而不是一根色条。 */
 .nav-item.active {
-  background: var(--primary-soft);
+  background: color-mix(in srgb, var(--primary) 14%, var(--pane));
   color: var(--primary);
   font-weight: 500;
+  box-shadow: var(--shadow-sm), var(--pane-hi);
 }
 .nav-item.active svg { opacity: 1; }
-/* 左侧朱色竖条：比药丸底色更有"书签"的意思 */
-.nav-item.active::before {
-  content: "";
-  position: absolute; left: -1px; top: 50%; transform: translateY(-50%);
-  width: 3px; height: 16px; border-radius: 0 3px 3px 0;
-  background: var(--primary);
-}
 
 .sidebar-footer {
   margin-top: auto;
@@ -375,8 +525,25 @@ button, input, textarea, select {
 .status-dot.online { background: var(--success); box-shadow: 0 0 0 3px var(--success-soft); }
 .status-dot.offline { background: var(--danger); box-shadow: 0 0 0 3px var(--danger-soft); }
 
-.main { flex: 1; overflow-y: auto; padding: var(--space-7) var(--space-6) 96px; }
-.page { max-width: 1020px; margin: 0 auto; animation: pageIn 0.34s var(--ease) both; }
+/* 内容区：第二层玻璃，比侧栏更薄——它要尽量把光场透上来，
+   让里面的卡片看起来是"浮在光上"的。 */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-7) var(--space-6) 96px;
+  background: var(--pane-2);
+  border: var(--bw) solid var(--pane-edge);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg), var(--pane-hi);
+  -webkit-backdrop-filter: blur(var(--pane-blur-soft)) saturate(var(--pane-sat));
+  backdrop-filter: blur(var(--pane-blur-soft)) saturate(var(--pane-sat));
+}
+.page {
+  max-width: 1020px;
+  margin: 0 auto;
+  /* 页面入场：轻微上浮 + 淡入。位移只有 8px——再大就不像原生，像网页广告。 */
+  animation: pageIn 0.4s var(--ease) both;
+}
 @keyframes pageIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 /* ---- 页头：从"标题+副标题"升级为有定调作用的开篇 ---- */
@@ -387,52 +554,64 @@ button, input, textarea, select {
   padding-bottom: var(--space-5);
   position: relative;
 }
-/* 页头收口：一条通版细线 + 左侧一段朱色，像书页的界格 */
+/* 页头收口：只留一条极淡的线。
+   上一版这里有一条通版细线加一段朱色短杠（像书页的界格），
+   那是"纸"的语汇；玻璃上不该出现这种印刷式的分割线。 */
 .page-head::after {
   content: "";
   position: absolute; left: 0; right: 0; bottom: 0; height: 1px;
-  background: var(--border);
+  background: linear-gradient(90deg, var(--border), transparent 72%);
 }
-.page-head::before {
-  content: "";
-  position: absolute; left: 0; bottom: 0; width: 44px; height: 2px;
-  background: var(--primary);
-  border-radius: 2px;
-}
-.page-head .sub { font-size: var(--fs-sm); color: var(--text-3); margin-top: 4px; }
+/* 副标题用 --text-2 而不是 --text-3：
+   它直接压在光场（或背景图）上，是全页最"暴露"的一级文字，
+   三级灰在带色晕染上只能勉强到 3:1，读起来是吃力的。 */
+.page-head .sub { font-size: var(--fs-sm); color: var(--text-2); margin-top: 4px; }
 
 /* 首页大日期 */
 .hero { display: flex; flex-direction: column; gap: 6px; }
 .hero-date { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; }
 .hero-day {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--fs-display);
   font-weight: 600;
-  letter-spacing: 0.04em;
-  line-height: 1.15;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
 }
 .hero-sub {
   font-size: var(--fs-sm);
   color: var(--text-3);
-  letter-spacing: 0.16em;
+  letter-spacing: 0.08em;
   font-variant-numeric: tabular-nums;
 }
 .hero-greet {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--fs-lg);
   font-weight: 600;
-  color: var(--text-2);
-  letter-spacing: 0.04em;
+  color: var(--text);
+  letter-spacing: -0.01em;
 }
-.hero-line { font-size: var(--fs-sm); color: var(--text-3); }
+.hero-line { font-size: var(--fs-sm); color: var(--text-2); }
 
-/* ---- 通用组件 ---- */
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--space-5);
-  box-shadow: var(--shadow-sm);
+/* ==========================================================================
+   玻璃卡片
+   下面这一组是"面板里的卡片"：同样的材质配方，只是厚度取 --pane-card。
+   统一写在一起，是为了让"卡片该长什么样"只有一处定义——
+   将来换风格时，改这里就等于改了一整类元素。
+   注意：卡片**不再**加 backdrop-filter。内容区已经是一层玻璃，
+   再叠一层模糊只会把底下的颜色搅浑，且开销翻倍。
+   面板里的小块靠"更亮的填充 + 高光边 + 浅投影"就足以浮起来了。
+   ========================================================================== */
+.card,
+.today-item,
+.post-card,
+.summary-card,
+.plan-card,
+.album-card,
+.backup-item,
+.dropzone {
+  background: var(--pane-card);
+  border: var(--bw) solid var(--pane-edge);
+  box-shadow: var(--shadow-sm), var(--pane-hi);
 }
 
 .section { margin-bottom: var(--space-6); }
@@ -440,17 +619,19 @@ button, input, textarea, select {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: var(--space-4);
 }
-/* 小节标题前的朱色小竖条 —— 全站统一的设计签名 */
+/* 小节标题前的朱色小竖条 —— 全站统一的设计签名。
+   它是这套界面里少数从上一版保留下来的东西：玻璃的通透需要一个
+   "实心"的对位，不然整页都是半透明的，反而找不到锚点。 */
 .section-title {
   display: inline-flex; align-items: center;
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--fs-md);
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: -0.01em;
 }
 .section-title::before {
   content: "";
-  width: 3px; height: 15px; border-radius: 2px;
+  width: 3px; height: 16px; border-radius: 2px;
   background: var(--primary);
   margin-right: 9px;
   flex: 0 0 auto;
@@ -459,22 +640,37 @@ button, input, textarea, select {
 .section-link { font-size: var(--fs-sm); color: var(--primary); cursor: pointer; transition: opacity var(--dur) var(--ease); }
 .section-link:hover { opacity: 0.72; }
 
+.card {
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+/* ---- 按钮 ----
+   原生按钮的手感：悬停微微上浮、阴影变大；按下立刻沉回去并轻微缩小。
+   缩放是最关键的一帧——没有它，点击就没有"接住"的感觉。 */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   padding: 8px 15px;
-  border-radius: 10px;
-  border: 1px solid var(--border-strong);
-  background: var(--surface);
+  border-radius: var(--radius-sm);
+  border: var(--bw) solid var(--pane-edge);
+  background: var(--pane-card);
   color: var(--text);
   font-size: var(--fs-sm);
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-sm), var(--pane-hi);
   transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease),
-              transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), opacity var(--dur) var(--ease);
+              transform 0.14s var(--ease), box-shadow var(--dur) var(--ease), opacity var(--dur) var(--ease);
   white-space: nowrap;
 }
-.btn:hover { background: var(--surface-2); transform: translateY(-1px); box-shadow: var(--shadow); }
-.btn:active { transform: translateY(0); opacity: .9; box-shadow: var(--shadow-press); }
+.btn:hover {
+  background: color-mix(in srgb, var(--surface) 76%, transparent);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+.btn:active {
+  transform: translateY(0) scale(0.97);
+  box-shadow: var(--shadow-press);
+}
 .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
 .btn svg { width: 15px; height: 15px; }
 
@@ -485,18 +681,24 @@ button, input, textarea, select {
   border-color: transparent;
   color: var(--on-primary);
   font-weight: 500;
-  box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--primary) 50%, transparent);
+  box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--primary) 50%, transparent),
+              inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 .btn-primary:hover {
   background: linear-gradient(160deg, var(--primary) 0%, var(--primary-hover) 100%);
-  box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--primary) 62%, transparent);
+  box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--primary) 62%, transparent),
+              inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 .btn-ghost { border-color: transparent; background: transparent; color: var(--text-2); box-shadow: none; }
-.btn-ghost:hover { background: var(--surface-2); color: var(--text); box-shadow: none; }
+.btn-ghost:hover {
+  background: color-mix(in srgb, var(--surface) 46%, transparent);
+  color: var(--text);
+  box-shadow: none;
+}
 
-.btn-danger { color: var(--danger); border-color: var(--border-strong); }
-.btn-danger:hover { background: var(--danger-soft); border-color: var(--danger); }
+.btn-danger { color: var(--danger); }
+.btn-danger:hover { background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
 
 .btn-sm { padding: 5px 11px; font-size: var(--fs-sm); border-radius: 8px; }
 .btn-icon { padding: 7px; border-radius: 9px; }
@@ -509,17 +711,18 @@ button, input, textarea, select {
 .input, .textarea, .select {
   width: 100%;
   padding: 9px 12px;
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
-  background: var(--surface);
+  border: var(--bw) solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface) 62%, transparent);
   color: var(--text);
   outline: none;
+  box-shadow: var(--shadow-press);
   transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background var(--dur) var(--ease);
 }
 .input:hover, .textarea:hover, .select:hover { border-color: color-mix(in srgb, var(--primary) 40%, var(--border-strong)); }
 .input:focus, .textarea:focus, .select:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-soft);
+  box-shadow: 0 0 0 3px var(--primary-soft), inset 0 1px 3px rgba(16, 20, 30, 0.08);
   background: var(--surface);
 }
 .textarea { resize: vertical; min-height: 140px; line-height: 1.8; font-family: var(--font); }
@@ -532,22 +735,23 @@ button, input, textarea, select {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 2px 9px; border-radius: 20px;
   font-size: var(--fs-xs); line-height: 1.7;
-  background: var(--surface-2); color: var(--text-2);
-  letter-spacing: 0.02em;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--text-2);
+  letter-spacing: 0.01em;
 }
-.tag-primary { background: var(--primary-soft); color: var(--primary); }
+.tag-primary { background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary); }
 .tag-accent { background: var(--accent-soft); color: var(--accent-text); font-weight: 500; }
 .tag-success { background: var(--success-soft); color: var(--success-text); }
 
 .empty { text-align: center; padding: 60px 20px; color: var(--text-3); }
-.empty .empty-title { font-family: var(--font-serif); font-size: var(--fs-md); color: var(--text-2); margin-bottom: 6px; letter-spacing: 0.04em; }
+.empty .empty-title { font-family: var(--font-display); font-size: var(--fs-md); color: var(--text-2); margin-bottom: 6px; letter-spacing: -0.01em; }
 .empty .empty-desc { font-size: var(--fs-sm); margin-bottom: var(--space-4); }
 .empty .empty-mark {
   width: 46px; height: 46px; margin: 0 auto var(--space-3);
   border-radius: 14px;
   background: linear-gradient(160deg, var(--surface-2), var(--surface-3));
   display: flex; align-items: center; justify-content: center; color: var(--text-3);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-sm), var(--pane-hi);
 }
 .empty .empty-mark svg { width: 22px; height: 22px; }
 
@@ -563,10 +767,7 @@ button, input, textarea, select {
   position: relative;
   display: flex; align-items: center; gap: var(--space-3);
   padding: 14px var(--space-4) 14px 18px;
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
   overflow: hidden;
   transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), transform var(--dur) var(--ease);
 }
@@ -574,14 +775,21 @@ button, input, textarea, select {
 .today-item::before {
   content: "";
   position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
-  background: var(--surface-3);
+  background: color-mix(in srgb, var(--text) 16%, transparent);
   transition: background var(--dur) var(--ease);
 }
-.today-item:hover { border-color: var(--border-strong); box-shadow: var(--shadow); transform: translateY(-1px); }
-.today-item.done { background: linear-gradient(90deg, var(--success-soft), var(--surface) 60%); border-color: transparent; }
+.today-item:hover {
+  border-color: color-mix(in srgb, var(--text) 18%, transparent);
+  box-shadow: var(--shadow), var(--pane-hi);
+  transform: translateY(-1px);
+}
+.today-item.done {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--success) 16%, transparent), var(--pane-card) 62%);
+  border-color: color-mix(in srgb, var(--success) 26%, var(--pane-edge));
+}
 .today-item.done::before { background: var(--success); }
 .today-item.over {
-  background: linear-gradient(90deg, var(--accent-soft), var(--surface) 60%);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 18%, transparent), var(--pane-card) 62%);
   border-color: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 .today-item.over::before { background: var(--accent); }
@@ -589,7 +797,7 @@ button, input, textarea, select {
 .today-check {
   width: 24px; height: 24px; flex: 0 0 auto;
   border-radius: 8px; border: 1.5px solid var(--border-strong);
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
   transition: all var(--dur) var(--ease);
@@ -597,18 +805,18 @@ button, input, textarea, select {
 .today-check:hover { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
 .today-check svg { width: 13px; height: 13px; opacity: 0; color: var(--on-primary); transition: opacity var(--dur) var(--ease); }
 .today-check.checked { background: var(--success); border-color: var(--success); }
-.today-check.checked svg { opacity: 1; animation: pop 0.28s var(--ease); }
+.today-check.checked svg { opacity: 1; animation: pop 0.3s var(--ease-spring); }
 @keyframes pop { 0% { transform: scale(.5); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
 
 .today-body { flex: 1; min-width: 0; }
-.today-name { font-size: var(--fs-base); font-weight: 500; letter-spacing: 0.01em; }
+.today-name { font-size: var(--fs-base); font-weight: 500; letter-spacing: -0.005em; }
 .today-meta { font-size: var(--fs-xs); color: var(--text-3); margin-top: 2px; }
 
 .today-progress { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
 .mini-ring { width: 38px; height: 38px; }
-.mini-ring text { font-size: 9px; font-weight: 600; font-family: var(--font-serif); }
+.mini-ring text { font-size: 9px; font-weight: 600; font-family: var(--font-display); }
 
-.progress-bar { height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+.progress-bar { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--text) 12%, transparent); overflow: hidden; }
 .progress-fill { height: 100%; border-radius: 3px; background: var(--primary); transition: width .4s var(--ease); }
 .progress-fill.over { background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #fff)); }
 
@@ -624,7 +832,8 @@ button, input, textarea, select {
 .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .photo-more {
   width: 96px; height: 96px; border-radius: 12px;
-  background: var(--surface-2); border: 1px dashed var(--border-strong);
+  background: color-mix(in srgb, var(--surface) 40%, transparent);
+  border: 1px dashed var(--border-strong);
   display: flex; align-items: center; justify-content: center;
   color: var(--text-3); font-size: var(--fs-sm); cursor: pointer; flex: 0 0 auto;
   transition: all var(--dur) var(--ease);
@@ -636,26 +845,26 @@ button, input, textarea, select {
 
 .summary-card {
   position: relative;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: var(--space-4) var(--space-4) 14px;
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-4) 14px;
   display: flex; flex-direction: column; gap: 6px;
-  box-shadow: var(--shadow-sm);
   overflow: hidden;
   transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
-.summary-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.summary-card:hover { transform: translateY(-2px); box-shadow: var(--shadow), var(--pane-hi); }
 .summary-card::before {
   content: "";
   position: absolute; left: 0; top: 14px; bottom: 14px; width: 2px;
   background: linear-gradient(to bottom, var(--primary), transparent);
   border-radius: 2px;
 }
-.summary-card .s-title { font-size: var(--fs-sm); color: var(--text-3); letter-spacing: 0.16em; }
+.summary-card .s-title { font-size: var(--fs-sm); color: var(--text-3); letter-spacing: 0.1em; }
+/* 大数字：等宽数字 + 负字距。数字跳动时不会左右晃，这是"原生感"的细节之一。 */
 .summary-card .s-main {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--fs-2xl);
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.03em;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
@@ -671,18 +880,19 @@ button, input, textarea, select {
   position: relative;
   display: flex; gap: var(--space-4);
   padding: var(--space-4) var(--space-4) var(--space-4) 18px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
   transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), transform var(--dur) var(--ease);
 }
-.post-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow); transform: translateY(-2px); }
+.post-card:hover {
+  border-color: color-mix(in srgb, var(--text) 18%, transparent);
+  box-shadow: var(--shadow), var(--pane-hi);
+  transform: translateY(-2px);
+}
 .post-card::before {
   content: "";
   position: absolute; left: 0; top: 16px; bottom: 16px; width: 3px;
-  background: var(--primary-soft);
+  background: color-mix(in srgb, var(--primary) 22%, transparent);
   border-radius: 0 3px 3px 0;
   transition: background var(--dur) var(--ease);
 }
@@ -693,19 +903,20 @@ button, input, textarea, select {
   border-right: 1px solid var(--border);
   padding-right: var(--space-3);
 }
-/* 日期用宋体大字，像手账的日期栏 */
+/* 日期用大字，像原生日历/天气里的主数字 */
 .post-date-day {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--fs-2xl);
   font-weight: 600;
   line-height: 1.05;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
-.post-date-ym { font-size: var(--fs-xs); color: var(--text-3); margin-top: 2px; letter-spacing: 0.06em; }
+.post-date-ym { font-size: var(--fs-xs); color: var(--text-3); margin-top: 2px; letter-spacing: 0.04em; }
 .post-date-wd { font-size: var(--fs-xs); color: var(--text-3); }
 
 .post-body { flex: 1; min-width: 0; }
-.post-title { font-family: var(--font-serif); font-size: var(--fs-lg); font-weight: 600; margin-bottom: 5px; letter-spacing: 0.02em; }
+.post-title { font-family: var(--font-display); font-size: var(--fs-lg); font-weight: 600; margin-bottom: 5px; letter-spacing: -0.015em; }
 .post-excerpt { font-size: var(--fs-sm); color: var(--text-2); line-height: 1.75; }
 .post-meta { display: flex; gap: var(--space-2); margin-top: var(--space-3); flex-wrap: wrap; }
 
@@ -715,34 +926,44 @@ button, input, textarea, select {
 .filter-bar {
   display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-4); flex-wrap: wrap;
 }
+/* 分段控件：轨道是"凹进去"的，选中项是"凸出来"的一小块玻璃。
+   凹与凸的对比，本身就是原生控件的表达方式。 */
 .seg {
-  display: inline-flex; background: var(--surface-2); border-radius: 10px; padding: 3px;
+  display: inline-flex;
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  border-radius: var(--radius-sm); padding: 3px;
   box-shadow: var(--shadow-press);
 }
 .seg button {
   border: 0; background: transparent; padding: 6px 13px;
-  border-radius: 7px; font-size: var(--fs-sm); color: var(--text-2); cursor: pointer;
+  border-radius: 8px; font-size: var(--fs-sm); color: var(--text-2); cursor: pointer;
   transition: all var(--dur) var(--ease);
 }
 .seg button:hover { color: var(--text); }
-.seg button.active { background: var(--surface); color: var(--text); font-weight: 500; box-shadow: var(--shadow-sm); }
+.seg button.active {
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--text); font-weight: 500;
+  box-shadow: var(--shadow-sm), var(--pane-hi);
+}
 
 .search-input { max-width: 240px; }
 
 .editor-actions { display: flex; gap: var(--space-2); justify-content: flex-end; margin-top: var(--space-4); }
 
 .dropzone {
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   padding: var(--space-6);
   text-align: center;
   color: var(--text-3);
   font-size: var(--fs-sm);
   cursor: pointer;
-  background: var(--surface);
   transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), color var(--dur) var(--ease);
 }
-.dropzone:hover, .dropzone.dragover { border-color: var(--primary); background: var(--primary-soft-2); color: var(--primary); }
+.dropzone:hover, .dropzone.dragover {
+  border-color: var(--primary);
+  background: var(--primary-soft-2);
+  color: var(--primary);
+}
 
 .preview-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-top: var(--space-3); }
 .preview-item {
@@ -754,30 +975,33 @@ button, input, textarea, select {
 .preview-remove {
   position: absolute; top: 4px; right: 4px;
   width: 20px; height: 20px; border-radius: 50%;
-  background: rgba(0,0,0,.6); color: #fff; border: 0;
+  background: rgba(0,0,0,.55); color: #fff; border: 0;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; font-size: var(--fs-sm); line-height: 1;
+  backdrop-filter: blur(6px);
 }
 .preview-remove:hover { background: rgba(0,0,0,.85); }
 
 .md-body { font-size: var(--fs-md); line-height: 1.95; color: var(--text); }
-.md-body h1 { font-size: var(--fs-2xl); margin: 28px 0 12px; font-family: var(--font-serif); font-weight: 600; }
-.md-body h2 { font-size: var(--fs-xl); margin: 24px 0 10px; font-family: var(--font-serif); font-weight: 600; }
-.md-body h3 { font-size: var(--fs-lg); margin: 20px 0 8px; font-family: var(--font-serif); font-weight: 600; }
+.md-body h1 { font-size: var(--fs-2xl); margin: 28px 0 12px; font-family: var(--font-display); font-weight: 600; letter-spacing: -0.025em; }
+.md-body h2 { font-size: var(--fs-xl); margin: 24px 0 10px; font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em; }
+.md-body h3 { font-size: var(--fs-lg); margin: 20px 0 8px; font-family: var(--font-display); font-weight: 600; letter-spacing: -0.015em; }
 .md-body p { margin: 12px 0; }
 .md-body img { max-width: 100%; border-radius: var(--radius); margin: 14px 0; display: block; box-shadow: var(--shadow); }
 .md-body blockquote {
   margin: 16px 0; padding: 10px 18px; border-left: 3px solid var(--primary);
-  background: var(--primary-soft-2); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  color: var(--text-2); font-family: var(--font-serif);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--text-2);
 }
 .md-body code {
-  background: var(--surface-2); padding: 2px 6px; border-radius: 5px;
+  background: color-mix(in srgb, var(--text) 9%, transparent); padding: 2px 6px; border-radius: 5px;
   font-size: var(--fs-xs); font-family: var(--font-mono);
 }
 .md-body pre {
-  background: var(--surface-2); padding: 14px 16px; border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--text) 7%, transparent); padding: 14px 16px; border-radius: var(--radius-sm);
   overflow-x: auto; margin: 14px 0;
+  border: 1px solid var(--border);
 }
 .md-body pre code { background: none; padding: 0; }
 .md-body ul, .md-body ol { margin: 12px 0; padding-left: 24px; }
@@ -790,24 +1014,22 @@ button, input, textarea, select {
 
 .plan-card {
   position: relative;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: var(--space-4);
+  border-radius: var(--radius-lg); padding: var(--space-4);
   display: flex; flex-direction: column; gap: var(--space-3);
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
   transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
-.plan-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.plan-card:hover { transform: translateY(-2px); box-shadow: var(--shadow), var(--pane-hi); }
 .plan-card.over {
   border-color: color-mix(in srgb, var(--accent) 34%, transparent);
-  background: linear-gradient(165deg, var(--accent-soft) 0%, var(--surface) 58%);
+  background: linear-gradient(165deg, color-mix(in srgb, var(--accent) 16%, transparent) 0%, var(--pane-card) 58%);
 }
 .plan-card.over::after {
   content: "超";
   position: absolute; top: 10px; right: 10px;
   width: 26px; height: 26px; border-radius: 8px;
   background: var(--accent); color: #fff;
-  font-family: var(--font-serif); font-size: var(--fs-base); font-weight: 600;
+  font-family: var(--font-display); font-size: var(--fs-base); font-weight: 600;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--accent) 60%, transparent);
   transform: rotate(6deg);
@@ -817,7 +1039,7 @@ button, input, textarea, select {
 .plan-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
 /* 超额时右上角有印章，给标题行让出位置，避免压住「超额 +1」标签 */
 .plan-card.over .plan-card-head { padding-right: 34px; }
-.plan-name { font-family: var(--font-serif); font-size: var(--fs-md); font-weight: 600; letter-spacing: 0.02em; }
+.plan-name { font-family: var(--font-display); font-size: var(--fs-md); font-weight: 600; letter-spacing: -0.01em; }
 .plan-sub { font-size: var(--fs-xs); color: var(--text-3); margin-top: 3px; }
 
 .plan-body { display: flex; align-items: center; gap: var(--space-4); }
@@ -828,10 +1050,10 @@ button, input, textarea, select {
   position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
 }
-.ring-value { font-family: var(--font-serif); font-size: var(--fs-md); font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.ring-value { font-family: var(--font-display); font-size: var(--fs-md); font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
 /* 环形图/日历格子这类固定尺寸容器内的小字，字号与容器绑定，
    不随字号阶梯放大（否则会撑破容器）。除这几处外不应再出现硬编码字号。 */
-.ring-label { font-size: 9.5px; color: var(--text-3); letter-spacing: 0.08em; }
+.ring-label { font-size: 9.5px; color: var(--text-3); letter-spacing: 0.06em; }
 
 .plan-stats { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
 .plan-stat { display: flex; justify-content: space-between; font-size: var(--fs-sm); }
@@ -850,7 +1072,7 @@ button, input, textarea, select {
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
 .cal-cell {
   aspect-ratio: 1; border-radius: 6px;
-  background: var(--surface-2); border: 1px solid transparent;
+  background: color-mix(in srgb, var(--text) 8%, transparent); border: 1px solid transparent;
   display: flex; align-items: center; justify-content: center;
   font-size: 10px; color: var(--text-3); cursor: pointer;
   transition: all var(--dur) var(--ease);
@@ -867,22 +1089,25 @@ button, input, textarea, select {
 
 .quick-values { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip {
-  padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border-strong);
-  background: var(--surface); font-size: var(--fs-sm); cursor: pointer;
+  padding: 4px 12px; border-radius: 20px; border: var(--bw) solid var(--border-strong);
+  background: color-mix(in srgb, var(--surface) 56%, transparent); font-size: var(--fs-sm); cursor: pointer;
   transition: all var(--dur) var(--ease);
 }
 .chip:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-soft-2); transform: translateY(-1px); }
+.chip:active { transform: translateY(0) scale(0.97); }
 
 /* ---- 相册 ---- */
 .album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--space-4); }
 
 .album-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); overflow: hidden; cursor: pointer;
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-lg); overflow: hidden; cursor: pointer;
   transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
-.album-card:hover { border-color: var(--border-strong); transform: translateY(-3px); box-shadow: var(--shadow); }
+.album-card:hover {
+  border-color: color-mix(in srgb, var(--text) 18%, transparent);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow), var(--pane-hi);
+}
 
 .album-cover {
   aspect-ratio: 4 / 3; background: var(--surface-2);
@@ -892,14 +1117,14 @@ button, input, textarea, select {
 }
 .album-cover::after {
   content: ""; position: absolute; inset: 0;
-  box-shadow: inset 0 -24px 30px -20px rgba(58, 44, 32, 0.22);
+  box-shadow: inset 0 -24px 30px -20px rgba(12, 16, 24, 0.28);
   pointer-events: none;
 }
-.album-cover img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s var(--ease); }
+.album-cover img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s var(--ease); }
 .album-card:hover .album-cover img { transform: scale(1.05); }
 .album-cover svg { width: 26px; height: 26px; }
 .album-info { padding: 12px 14px 13px; }
-.album-name { font-family: var(--font-serif); font-size: var(--fs-base); font-weight: 600; letter-spacing: 0.02em; }
+.album-name { font-family: var(--font-display); font-size: var(--fs-base); font-weight: 600; letter-spacing: -0.01em; }
 .album-count { font-size: var(--fs-xs); color: var(--text-3); margin-top: 3px; }
 
 .photo-wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
@@ -909,7 +1134,7 @@ button, input, textarea, select {
   cursor: pointer;
   box-shadow: var(--shadow-sm);
 }
-.photo-cell img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s var(--ease); }
+.photo-cell img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .5s var(--ease); }
 .photo-cell:hover img { transform: scale(1.06); }
 .photo-cell .photo-actions {
   position: absolute; inset: auto 0 0 0; padding: 8px;
@@ -945,7 +1170,7 @@ button, input, textarea, select {
   border: 2px solid transparent; cursor: pointer;
   transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   position: relative;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.35);
 }
 .theme-dot:hover { transform: scale(1.12); }
 .theme-dot.active { border-color: var(--text); }
@@ -956,16 +1181,18 @@ button, input, textarea, select {
 
 .switch {
   position: relative; width: 42px; height: 23px;
-  background: var(--surface-3); border-radius: 20px; cursor: pointer;
+  background: color-mix(in srgb, var(--text) 16%, transparent);
+  border-radius: 20px; cursor: pointer;
   transition: background var(--dur) var(--ease); border: 0; padding: 0; flex: 0 0 auto;
+  box-shadow: var(--shadow-press);
 }
 .switch::after {
   content: ""; position: absolute; top: 3px; left: 3px;
   width: 17px; height: 17px; border-radius: 50%; background: #fff;
-  transition: transform var(--dur) var(--ease);
+  transition: transform 0.24s var(--ease-spring);
   box-shadow: 0 1px 3px rgba(0,0,0,.25);
 }
-.switch.on { background: var(--primary); }
+.switch.on { background: var(--primary); box-shadow: none; }
 .switch.on::after { transform: translateX(19px); }
 .switch:disabled { opacity: 0.55; cursor: default; }
 
@@ -1009,7 +1236,7 @@ button, input, textarea, select {
 .bg-badge {
   position: absolute; left: 5px; bottom: 5px;
   padding: 1px 7px; border-radius: 20px;
-  font-size: var(--fs-xs); line-height: 1.7; letter-spacing: 0.02em;
+  font-size: var(--fs-xs); line-height: 1.7; letter-spacing: 0.01em;
   background: color-mix(in srgb, var(--text) 82%, transparent);
   color: var(--bg);
 }
@@ -1018,38 +1245,42 @@ button, input, textarea, select {
 .backup-item {
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
   padding: 11px var(--space-3);
-  border: 1px solid var(--border); border-radius: 10px;
-  background: var(--surface);
+  border-radius: var(--radius-sm);
   transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
-.backup-item:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.backup-item:hover { border-color: color-mix(in srgb, var(--text) 18%, transparent); box-shadow: var(--shadow-sm), var(--pane-hi); }
 .backup-item .b-name { font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
 .backup-item .b-meta { font-size: var(--fs-xs); color: var(--text-3); }
 
-/* ---- 弹窗 ---- */
+/* ---- 弹窗 ----
+   遮罩用大半径模糊而不是一片黑：这是原生浮层的做法——
+   底下的内容还在，只是被"推到"了焦外。 */
 .modal-root { position: fixed; inset: 0; pointer-events: none; z-index: 100; }
 .modal-backdrop {
   position: absolute; inset: 0;
-  background: color-mix(in srgb, var(--bg-deep) 62%, rgba(20, 16, 12, 0.5));
-  backdrop-filter: blur(3px);
+  background: color-mix(in srgb, var(--bg-deep) 40%, rgba(12, 14, 18, 0.34));
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
   pointer-events: auto;
   display: flex; align-items: center; justify-content: center;
   padding: var(--space-5);
-  animation: fadeIn .18s var(--ease);
+  animation: fadeIn .2s var(--ease);
 }
 @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(14px) scale(.985) } to { opacity: 1; transform: none } }
 
 .modal {
-  background: var(--surface);
+  background: var(--pane);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg), var(--pane-hi);
+  border: var(--bw) solid var(--pane-edge);
+  -webkit-backdrop-filter: blur(var(--pane-blur)) saturate(var(--pane-sat));
+  backdrop-filter: blur(var(--pane-blur)) saturate(var(--pane-sat));
   width: 100%; max-width: 560px;
   max-height: calc(100vh - 80px);
   display: flex; flex-direction: column;
   pointer-events: auto;
-  animation: slideUp .22s var(--ease);
+  animation: slideUp 0.26s var(--ease);
   overflow: hidden;
 }
 .modal.wide { max-width: 780px; }
@@ -1061,13 +1292,13 @@ button, input, textarea, select {
   border-bottom: 1px solid var(--border);
   flex: 0 0 auto;
 }
-.modal-title { font-family: var(--font-serif); font-size: var(--fs-md); font-weight: 600; letter-spacing: 0.04em; }
+.modal-title { font-family: var(--font-display); font-size: var(--fs-md); font-weight: 600; letter-spacing: -0.01em; }
 .modal-close {
   width: 30px; height: 30px; border-radius: 9px; border: 0; background: transparent;
   color: var(--text-3); cursor: pointer; display: flex; align-items: center; justify-content: center;
   transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
 }
-.modal-close:hover { background: var(--surface-2); color: var(--text); }
+.modal-close:hover { background: color-mix(in srgb, var(--surface) 50%, transparent); color: var(--text); }
 .modal-close svg { width: 16px; height: 16px; }
 
 .modal-body { padding: var(--space-5); overflow-y: auto; flex: 1; }
@@ -1075,7 +1306,7 @@ button, input, textarea, select {
   display: flex; gap: var(--space-2); justify-content: flex-end;
   padding: var(--space-4) var(--space-5);
   border-top: 1px solid var(--border); flex: 0 0 auto;
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
 }
 
 /* 提醒弹窗 */
@@ -1084,23 +1315,26 @@ button, input, textarea, select {
   background: linear-gradient(160deg, var(--primary-soft), color-mix(in srgb, var(--primary) 16%, var(--surface)));
   color: var(--primary);
   display: flex; align-items: center; justify-content: center; margin-bottom: var(--space-3);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-sm), var(--pane-hi);
 }
 .reminder-icon svg { width: 22px; height: 22px; }
 .reminder-list { display: flex; flex-direction: column; gap: 8px; margin-top: var(--space-4); }
 .reminder-item {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 13px; border-radius: 10px; background: var(--surface-2); font-size: var(--fs-sm);
+  padding: 10px 13px; border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  font-size: var(--fs-sm);
 }
 
 /* 图片查看 */
 .lightbox {
   position: fixed; inset: 0; z-index: 200;
-  background: rgba(14, 12, 10, .94);
-  backdrop-filter: blur(6px);
+  background: rgba(10, 12, 15, .82);
+  -webkit-backdrop-filter: blur(24px) saturate(120%);
+  backdrop-filter: blur(24px) saturate(120%);
   display: flex; align-items: center; justify-content: center;
   padding: var(--space-5);
-  animation: fadeIn .2s var(--ease);
+  animation: fadeIn .22s var(--ease);
 }
 .lightbox img {
   max-width: 100%; max-height: 100%; object-fit: contain;
@@ -1112,9 +1346,10 @@ button, input, textarea, select {
   width: 44px; height: 44px; border-radius: 50%;
   background: rgba(255,255,255,.14); border: 0; color: #fff;
   display: flex; align-items: center; justify-content: center; cursor: pointer;
-  transition: background var(--dur) var(--ease);
+  transition: background var(--dur) var(--ease), transform var(--dur) var(--ease);
 }
 .lightbox-nav:hover { background: rgba(255,255,255,.28); }
+.lightbox-nav:active { transform: translateY(-50%) scale(0.94); }
 .lightbox-nav.prev { left: 24px; }
 .lightbox-nav.next { right: 24px; }
 .lightbox-nav svg { width: 20px; height: 20px; }
@@ -1130,24 +1365,29 @@ button, input, textarea, select {
 .lightbox-caption {
   position: absolute; bottom: 26px; left: 0; right: 0;
   text-align: center; color: rgba(255,255,255,.82); font-size: var(--fs-sm);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
 }
 
-/* ---- 轻提示 ---- */
+/* ---- 轻提示 ----
+   也做成一片小玻璃：它是浮在界面之上的，理应与其它浮层同一种材质。 */
 .toast-root {
   position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%);
   z-index: 300; display: flex; flex-direction: column; gap: 8px; align-items: center;
   pointer-events: none;
 }
 .toast {
-  background: var(--text); color: var(--bg);
+  background: var(--pane);
+  color: var(--text);
+  border: var(--bw) solid var(--pane-edge);
   padding: 10px 20px; border-radius: 22px; font-size: var(--fs-sm);
-  box-shadow: var(--shadow-lg);
-  animation: slideUp .22s var(--ease);
+  box-shadow: var(--shadow-lg), var(--pane-hi);
+  -webkit-backdrop-filter: blur(var(--pane-blur)) saturate(var(--pane-sat));
+  backdrop-filter: blur(var(--pane-blur)) saturate(var(--pane-sat));
+  animation: slideUp .26s var(--ease);
   max-width: 70vw;
 }
-.toast.error { background: var(--danger); color: #fff; }
-.toast.success { background: var(--success); color: #fff; }
+.toast.error { background: var(--danger); color: #fff; border-color: transparent; }
+.toast.success { background: var(--success); color: #fff; border-color: transparent; }
 
 /* ---- 顶部加载条 ---- */
 .loading-bar {
@@ -1177,6 +1417,16 @@ button, input, textarea, select {
 .mt-4 { margin-top: var(--space-4); }
 .mb-3 { margin-bottom: var(--space-3); }
 .flex-between { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+
+/* ---- 玻璃不可用时的兜底 ----
+   老浏览器、或用户把"减少透明度"打开时，backdrop-filter 会失效。
+   透明填充一旦失去模糊托底，底下的光场/照片会直接透上来把文字搅乱，
+   所以这里退回不透明色——"没有玻璃"好过"看不清"。 */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .sidebar, .main, .modal, .toast { background: var(--surface); }
+  .card, .today-item, .post-card, .summary-card, .plan-card, .album-card,
+  .backup-item, .dropzone, .btn { background: var(--surface); }
+}
 
 /* ---- 尊重系统的"减少动态效果"设置 ---- */
 @media (prefers-reduced-motion: reduce) {
