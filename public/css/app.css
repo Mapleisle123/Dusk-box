@@ -35,15 +35,18 @@
   /* --font 保留为正文族，历史上一直被 body 与 textarea 引用 */
   --font: var(--font-sans);
 
-  /* ---- 字号阶梯（原来 12.5~20px 挤在一起，没有层级） ---- */
-  --fs-xs: 11.5px;
-  --fs-sm: 12.5px;
-  --fs-base: 14px;
-  --fs-md: 15px;
-  --fs-lg: 17px;
-  --fs-xl: 21px;
-  --fs-2xl: 28px;
-  --fs-display: 34px;
+  /* ---- 字号阶梯 ----
+     整体往上抬了约 1px：原来的字号偏小，长时间看日志类文字会累。
+     各档之间保持明确间距，越大越疏，避免"挤在一起没有层级"。
+     除固定尺寸图形内部的小字（见文件末尾说明），所有文字都应走这套变量。 */
+  --fs-xs: 12.5px;
+  --fs-sm: 14px;
+  --fs-base: 15px;
+  --fs-md: 16px;
+  --fs-lg: 18.5px;
+  --fs-xl: 22px;
+  --fs-2xl: 30px;
+  --fs-display: 36px;
 
   /* ---- 纸 ---- */
   --bg: #F6F2EA;
@@ -281,7 +284,7 @@ button, input, textarea, select {
   padding: 9px var(--space-3);
   border-radius: var(--radius-sm);
   color: var(--text-2);
-  font-size: 13.5px;
+  font-size: var(--fs-sm);
   transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
 }
 .nav-item svg { width: 18px; height: 18px; flex: 0 0 auto; opacity: 0.85; }
@@ -408,7 +411,7 @@ button, input, textarea, select {
   border: 1px solid var(--border-strong);
   background: var(--surface);
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   cursor: pointer;
   box-shadow: var(--shadow-sm);
   transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease),
@@ -648,7 +651,7 @@ button, input, textarea, select {
 
 .post-body { flex: 1; min-width: 0; }
 .post-title { font-family: var(--font-serif); font-size: var(--fs-lg); font-weight: 600; margin-bottom: 5px; letter-spacing: 0.02em; }
-.post-excerpt { font-size: 13.5px; color: var(--text-2); line-height: 1.75; }
+.post-excerpt { font-size: var(--fs-sm); color: var(--text-2); line-height: 1.75; }
 .post-meta { display: flex; gap: var(--space-2); margin-top: var(--space-3); flex-wrap: wrap; }
 
 .post-thumbs { display: flex; gap: 8px; flex: 0 0 auto; align-self: flex-start; }
@@ -698,7 +701,7 @@ button, input, textarea, select {
   width: 20px; height: 20px; border-radius: 50%;
   background: rgba(0,0,0,.6); color: #fff; border: 0;
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 13px; line-height: 1;
+  cursor: pointer; font-size: var(--fs-sm); line-height: 1;
 }
 .preview-remove:hover { background: rgba(0,0,0,.85); }
 
@@ -715,7 +718,7 @@ button, input, textarea, select {
 }
 .md-body code {
   background: var(--surface-2); padding: 2px 6px; border-radius: 5px;
-  font-size: 12.5px; font-family: var(--font-mono);
+  font-size: var(--fs-xs); font-family: var(--font-mono);
 }
 .md-body pre {
   background: var(--surface-2); padding: 14px 16px; border-radius: var(--radius-sm);
@@ -749,7 +752,7 @@ button, input, textarea, select {
   position: absolute; top: 10px; right: 10px;
   width: 26px; height: 26px; border-radius: 8px;
   background: var(--accent); color: #fff;
-  font-family: var(--font-serif); font-size: 14px; font-weight: 600;
+  font-family: var(--font-serif); font-size: var(--fs-base); font-weight: 600;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--accent) 60%, transparent);
   transform: rotate(6deg);
@@ -771,6 +774,8 @@ button, input, textarea, select {
   align-items: center; justify-content: center;
 }
 .ring-value { font-family: var(--font-serif); font-size: var(--fs-md); font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+/* 环形图/日历格子这类固定尺寸容器内的小字，字号与容器绑定，
+   不随字号阶梯放大（否则会撑破容器）。除这几处外不应再出现硬编码字号。 */
 .ring-label { font-size: 9.5px; color: var(--text-3); letter-spacing: 0.08em; }
 
 .plan-stats { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
@@ -875,7 +880,7 @@ button, input, textarea, select {
   border-bottom: 1px solid var(--border);
 }
 .settings-row:last-child { border-bottom: 0; }
-.settings-row .s-label { font-size: 13.5px; font-weight: 500; }
+.settings-row .s-label { font-size: var(--fs-sm); font-weight: 500; }
 .settings-row .s-desc { font-size: var(--fs-xs); color: var(--text-3); margin-top: 3px; }
 .settings-row .s-control { flex: 0 0 auto; display: flex; align-items: center; gap: var(--space-2); }
 
@@ -922,7 +927,7 @@ button, input, textarea, select {
   transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
 .backup-item:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
-.backup-item .b-name { font-size: 13px; font-variant-numeric: tabular-nums; }
+.backup-item .b-name { font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
 .backup-item .b-meta { font-size: var(--fs-xs); color: var(--text-3); }
 
 /* ---- 弹窗 ---- */
@@ -989,7 +994,7 @@ button, input, textarea, select {
 .reminder-list { display: flex; flex-direction: column; gap: 8px; margin-top: var(--space-4); }
 .reminder-item {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 13px; border-radius: 10px; background: var(--surface-2); font-size: 13.5px;
+  padding: 10px 13px; border-radius: 10px; background: var(--surface-2); font-size: var(--fs-sm);
 }
 
 /* 图片查看 */
@@ -1040,7 +1045,7 @@ button, input, textarea, select {
 }
 .toast {
   background: var(--text); color: var(--bg);
-  padding: 10px 20px; border-radius: 22px; font-size: 13px;
+  padding: 10px 20px; border-radius: 22px; font-size: var(--fs-sm);
   box-shadow: var(--shadow-lg);
   animation: slideUp .22s var(--ease);
   max-width: 70vw;
@@ -1068,7 +1073,7 @@ button, input, textarea, select {
 .kv .k { color: var(--text-3); }
 .kv .v { font-variant-numeric: tabular-nums; }
 
-.mono { font-family: var(--font-mono); font-size: 12px; }
+.mono { font-family: var(--font-mono); font-size: var(--fs-xs); }
 .muted { color: var(--text-3); }
 .text-sm { font-size: var(--fs-sm); }
 .mt-2 { margin-top: var(--space-2); }
