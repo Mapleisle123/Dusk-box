@@ -5,7 +5,7 @@
  * 不需要刷新页面。
  */
 
-import { api } from './api.js';
+import { api, assetUrl } from './api.js';
 
 export const store = {
   settings: null,
@@ -20,12 +20,33 @@ export const store = {
     return data;
   },
 
-  /** 把主题写到根元素上 */
+  /** 把主题与背景图写到根元素上 */
   applyTheme() {
     const theme = this.settings?.theme || 'akane';
     const mode = this.settings?.colorMode || 'light';
-    document.documentElement.setAttribute('data-theme', theme);
-    document.documentElement.setAttribute('data-mode', mode);
+    const root = document.documentElement;
+    root.setAttribute('data-theme', theme);
+    root.setAttribute('data-mode', mode);
+    this.applyBackground();
+  },
+
+  /**
+   * 应用页面背景图。
+   *
+   * 只把图片地址写进 CSS 变量、并打一个 data-bg 标记；
+   * 半透明的效果完全交给 CSS 的图层规则去做（见 app.css），
+   * 这样换主题、切深浅色时纱的颜色会自动跟着变。
+   */
+  applyBackground() {
+    const root = document.documentElement;
+    const name = this.settings?.backgroundImage;
+    if (name) {
+      root.style.setProperty('--bg-photo', `url("${assetUrl(`background/${name}`)}")`);
+      root.setAttribute('data-bg', 'on');
+    } else {
+      root.style.removeProperty('--bg-photo');
+      root.removeAttribute('data-bg');
+    }
   },
 
   /** 切换主色调 */

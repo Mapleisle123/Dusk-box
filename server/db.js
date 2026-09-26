@@ -107,6 +107,10 @@ export const DEFAULT_SETTINGS = {
   backupTime: '23:30',
   backupKeep: '30',
   backupDirName: '备份',
+  // 页面背景图：img/background 目录下的文件名，空字符串表示不使用背景图
+  backgroundImage: 'background.jpg',
+  // 注意：开机自启不在这里。它的真实状态是「启动」文件夹里的快捷方式，
+  // 见 server/autostart.js 与 GET /api/autostart。
   autoStart: 'false',
   lastBackupAt: '',
 };

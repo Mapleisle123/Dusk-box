@@ -281,8 +281,9 @@ function sendFile(res, filePath, { download = false } = {}) {
  * @param {Router} options.router           业务路由（以 /api 开头）
  * @param {string} options.staticDir        前端静态文件目录
  * @param {(url:string)=>string|null} [options.fileResolver] 把 URL 映射到数据目录下的文件
+ * @param {string} [options.assetDir]       项目自带资源目录，通过 /img/* 访问（logo、背景图）
  */
-export function createServer({ router, staticDir, fileResolver }) {
+export function createServer({ router, staticDir, fileResolver, assetDir }) {
   return async function handleRequest(req, res) {
     let url;
     try {
@@ -324,14 +325,27 @@ export function createServer({ router, staticDir, fileResolver }) {
         return;
       }
 
-      // 3. API 路径未被任何路由命中：必须返回 JSON 404，
+      // 3. 项目自带资源（img/ 下的 logo 与背景图）。
+      //    注意：这里找不到时必须返回 JSON 404，不能回退到 index.html，
+      //    否则 <img> 会拿到一段 HTML 而显示成破图。
+      if (assetDir && pathname.startsWith('/img/')) {
+        const target = safeResolve(assetDir, pathname.slice('/img'.length));
+        if (target && fs.existsSync(target) && fs.statSync(target).isFile()) {
+          sendFile(res, target);
+          return;
+        }
+        sendJson(res, 404, { error: '资源不存在' });
+        return;
+      }
+
+      // 4. API 路径未被任何路由命中：必须返回 JSON 404，
       //    不能回退到 index.html，否则前端会把 404 当成正常页面数据。
       if (pathname.startsWith('/api/')) {
         sendJson(res, 404, { error: `接口不存在：${req.method} ${pathname}` });
         return;
       }
 
-      // 4. 前端静态资源
+      // 5. 前端静态资源
       if (req.method === 'GET' || req.method === 'HEAD') {
         const target = safeResolve(staticDir, pathname === '/' ? '/index.html' : pathname);
         if (target && fs.existsSync(target) && fs.statSync(target).isFile()) {

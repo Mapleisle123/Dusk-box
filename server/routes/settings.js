@@ -15,6 +15,7 @@ import { getAllSettings } from '../db.js';
 import { createZip, collectDirEntries } from '../zip.js';
 import { backupStamp } from '../backup.js';
 import { getAutostart, setAutostart } from '../autostart.js';
+import { listBackgrounds, isAllowedBackground, DEFAULT_BACKGROUND } from '../assets.js';
 
 /** 需要纳入导出的分类目录 */
 const EXPORT_DIRS = ['发布', '计划', '相册'];
@@ -32,6 +33,7 @@ const EDITABLE = new Set([
   'backupEnabled',
   'backupTime',
   'backupKeep',
+  'backgroundImage',
 ]);
 
 /** 允许的主题主色调 */
@@ -59,6 +61,9 @@ function validateSettingsPatch(patch) {
       if (!Number.isInteger(n) || n < 1 || n > 365) {
         throw badRequest('保留份数应为 1~365 之间的整数');
       }
+    }
+    if (key === 'backgroundImage' && !isAllowedBackground(value)) {
+      throw badRequest('背景图必须是 img/background 目录里已有的图片文件名（留空表示不使用）');
     }
     out[key] = value;
   }
@@ -123,6 +128,19 @@ export function mountSettingsRoutes(router, ctx) {
     ctx.setSettings(patch);
     return { settings: getAllSettings(ctx.db) };
   });
+
+  /**
+   * 可选背景图列表 + 当前选择。
+   *
+   * 图片来源是项目里的 img/background 目录：往里放图片就会出现在列表里，
+   * 不需要改代码。
+   */
+  router.get('/api/backgrounds', () => ({
+    images: listBackgrounds(),
+    // 与 /api/settings 里的 backgroundImage 是同一个值，避免两个接口各说各话
+    current: ctx.getSetting('backgroundImage') ?? '',
+    defaultImage: DEFAULT_BACKGROUND,
+  }));
 
   /**
    * 修改数据目录。

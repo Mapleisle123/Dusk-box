@@ -19,7 +19,24 @@ import { refresh } from '../router.js';
 // 各分区
 // ===========================================================================
 
-function appearanceBlock(settings) {
+function appearanceBlock(settings, backgrounds) {
+  const images = backgrounds?.images ?? [];
+  const current = String(settings.backgroundImage ?? '');
+  const defaultImage = String(backgrounds?.defaultImage ?? '');
+
+  const thumbs = [
+    `<button class="bg-thumb bg-thumb-none ${current ? '' : 'active'}" type="button"
+             data-bg-pick="" title="不使用背景图"><span>不使用</span></button>`,
+    ...images.map(
+      (img) => `
+      <button class="bg-thumb ${current === img.name ? 'active' : ''}" type="button"
+              data-bg-pick="${esc(img.name)}" title="${esc(img.name)}">
+        <img src="${esc(img.url)}" alt="${esc(img.name)}" loading="lazy" decoding="async">
+        ${img.name === defaultImage ? '<span class="bg-badge">默认</span>' : ''}
+      </button>`,
+    ),
+  ].join('');
+
   return `
     <div class="card settings-block">
       <div class="section-title mb-3">外观</div>
@@ -52,6 +69,29 @@ function appearanceBlock(settings) {
                   data-toggle-mode aria-label="切换深色模式"></button>
         </div>
       </div>
+
+      <div class="settings-row">
+        <div>
+          <div class="s-label">页面背景图</div>
+          <div class="s-desc">
+            选一张图垫在页面最底层，会以大约一半的透明度透出来。<br>
+            把图片放进项目里的 <span class="mono">img/background</span> 目录，这里就会自动列出来。
+          </div>
+        </div>
+        <div class="s-control">
+          <span class="s-state bg-state ${current ? 'is-on' : ''}"
+                data-bg-state title="${esc(current)}">${esc(current || '未使用')}</span>
+        </div>
+      </div>
+
+      <div class="bg-picker">${thumbs}</div>
+      ${
+        images.length
+          ? ''
+          : `<p class="text-sm muted" style="padding-bottom:12px">
+                img/background 里还没有图片，往里面放一张就会出现在上面。
+             </p>`
+      }
     </div>`;
 }
 
@@ -281,10 +321,12 @@ async function restoreFlow(name) {
 // ===========================================================================
 
 export async function pageSettings() {
-  const [{ settings, runtime }, { backups }, autostart] = await Promise.all([
+  const [{ settings, runtime }, { backups }, autostart, backgrounds] = await Promise.all([
     api.getSettings(),
     api.listBackups(),
     api.getAutostart(),
+    // 背景图列表失败时不连累整页设置（老版本服务端可能还没有这个接口）
+    api.listBackgrounds().catch(() => ({ images: [], current: '', defaultImage: '' })),
   ]);
 
   const html = `
@@ -295,7 +337,7 @@ export async function pageSettings() {
           <div class="sub">主题、数据位置与备份</div>
         </div>
       </div>
-      ${appearanceBlock(settings)}
+      ${appearanceBlock(settings, backgrounds)}
       ${dataBlock(runtime)}
       ${backupBlock(settings)}
       ${backupListBlock(backups)}
@@ -328,6 +370,29 @@ export async function pageSettings() {
         } catch (err) {
           toastError(err.message);
         }
+      });
+
+      // 背景图
+      root.querySelectorAll('[data-bg-pick]').forEach((thumb) => {
+        thumb.addEventListener('click', async () => {
+          const name = thumb.dataset.bgPick;
+          if (name === String(store.settings?.backgroundImage ?? '')) return;
+          try {
+            await store.update({ backgroundImage: name });
+            root
+              .querySelectorAll('[data-bg-pick]')
+              .forEach((t) => t.classList.toggle('active', t === thumb));
+            const state = root.querySelector('[data-bg-state]');
+            if (state) {
+              state.textContent = name || '未使用';
+              state.title = name;
+              state.classList.toggle('is-on', Boolean(name));
+            }
+            toastSuccess(name ? `背景图已换成 ${name}` : '已关闭页面背景图');
+          } catch (err) {
+            toastError(err.message);
+          }
+        });
       });
 
       // 修改数据目录

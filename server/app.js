@@ -103,6 +103,8 @@ export function createApp({ dataRoot, staticDir = path.join(PROJECT_ROOT, 'publi
   const handler = createServer({
     router,
     staticDir,
+    // 项目自带资源（img/logo、img/background）通过 /img/* 访问
+    assetDir: path.join(PROJECT_ROOT, 'img'),
     fileResolver: (pathname) => {
       // /files/<数据目录内的相对路径>
       const rel = pathname.slice('/files/'.length);

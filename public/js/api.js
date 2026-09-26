@@ -114,6 +114,9 @@ export const api = {
   getAutostart: () => request('GET', '/api/autostart'),
   setAutostart: (enabled) => request('PUT', '/api/autostart', { json: { enabled } }),
 
+  // ---- 背景图 ----
+  listBackgrounds: () => request('GET', '/api/backgrounds'),
+
   // ---- 备份 ----
   listBackups: () => request('GET', '/api/backups'),
   createBackup: (reason) => request('POST', '/api/backups', { json: { reason } }),
@@ -125,6 +128,18 @@ export const api = {
 export function fileUrl(relPath) {
   if (!relPath) return '';
   return `/files/${String(relPath)
+    .split('/')
+    .map((seg) => encodeURIComponent(seg))
+    .join('/')}`;
+}
+
+/**
+ * 项目自带资源（img/ 目录）的 URL。
+ * logo、背景图这类随应用走的图片走这里，与用户数据（/files/）区分开。
+ */
+export function assetUrl(relPath) {
+  if (!relPath) return '';
+  return `/img/${String(relPath)
     .split('/')
     .map((seg) => encodeURIComponent(seg))
     .join('/')}`;
