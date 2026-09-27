@@ -214,6 +214,28 @@ test('S17 · 三种厚度都真的带透明度，且厚度有序', () => {
   }
 });
 
+test('S17 · 简约玻璃维持在"更透"这一档，没有被悄悄调回厚板', () => {
+  // 用户明确提过：简约（liquid）风格下毛玻璃要更透一些。
+  // 上面那条守的是"别透过头"（地板与对比度两条下限）——
+  // 但那些用例有个盲区：玻璃**越厚越安全**，全调回 74/56/66 反而一并全绿。
+  // 所以这条守反面：不透明度不许超过设计值，否则这次调整会被悄悄退回去。
+  const CEILING = {
+    light: { pane: 0.68, 'pane-card': 0.58, 'pane-2': 0.48 },
+    dark: { pane: 0.5, 'pane-card': 0.44, 'pane-2': 0.28 },
+  };
+  for (const mode of ['light', 'dark']) {
+    const vars = varsOf(mode);
+    for (const [token, max] of Object.entries(CEILING[mode])) {
+      const { alpha } = parsePaneMix(vars[token], `${mode} 的 --${token}`);
+      assert.ok(
+        alpha <= max + 1e-9,
+        `${mode} 的 --${token} 不透明度是 ${alpha}，超过了"更透"这一档的上限 ${max}。` +
+          '简约风格下毛玻璃要比原来更透，调厚等于把这次调整悄悄退了回去',
+      );
+    }
+  }
+});
+
 test('S17 · 玻璃的边是一道更亮的细线（玻璃的"存在感"主要来自它）', () => {
   for (const mode of ['light', 'dark']) {
     const vars = varsOf(mode);

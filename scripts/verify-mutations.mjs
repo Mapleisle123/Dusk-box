@@ -46,8 +46,20 @@ const MUTATIONS = [
   {
     name: '把卡片填充改成实心（玻璃悄悄退化成一块板）',
     file: 'public/css/app.css',
-    apply: (css) => css.replace('--pane-card: color-mix(in srgb, var(--surface) 66%, transparent);', '--pane-card: var(--surface);'),
+    apply: (css) => css.replace('--pane-card: color-mix(in srgb, var(--surface) 58%, transparent);', '--pane-card: var(--surface);'),
     expect: '透明',
+  },
+  {
+    name: '把简约玻璃调回更不透明（把这次"更透"的调整悄悄退回去）',
+    file: 'public/css/app.css',
+    // 注意方向：要往"更不透明"改，才能命中"更透"那条下限护栏。
+    // 往更透改反而会被地板/对比度用例拦住，那是另一条护栏，不是这一条。
+    apply: (css) =>
+      css.replace(
+        '--pane-card: color-mix(in srgb, var(--surface) 58%, transparent);',
+        '--pane-card: color-mix(in srgb, var(--surface) 66%, transparent);',
+      ),
+    expect: '更透',
   },
   {
     name: '把三级文字调浅（对比度不足）',
@@ -96,7 +108,7 @@ const MUTATIONS = [
     file: 'public/css/app.css',
     apply: (css) =>
       css.replace(
-        '--pane-2: color-mix(in srgb, var(--surface) 56%, transparent);',
+        '--pane-2: color-mix(in srgb, var(--surface) 48%, transparent);',
         '--pane-2: color-mix(in srgb, var(--surface) 30%, transparent);',
       ),
     expect: '浅色地板',
