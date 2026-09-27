@@ -1409,6 +1409,38 @@ button, input, textarea, select {
   background: color-mix(in srgb, var(--text) 82%, transparent);
   color: var(--bg);
 }
+/* "我的"标记与"默认"错开：一张图可能既是自带默认图，
+   又是用户自己添进来的同内容副本，两个标记不该叠在一起 */
+.bg-badge-mine { left: auto; right: 5px; }
+
+/* 缩略图外面的那一层。自己添加的图要挂一个删除按钮，
+   按钮不能嵌在缩略图按钮**里面**（button 套 button 会被浏览器拆开，
+   点删除会变成点选那张图），所以只能靠这层容器做相对定位。
+   不带删除按钮的缩略图也套这一层，是为了让所有格子的间距算法一致。 */
+.bg-slot { position: relative; }
+
+/* 删除按钮：压在缩略图右上角，用与 .bg-badge 同一套反相配色，
+   深浅色下都读得出来。故意常驻显示（只压低一点存在感）：
+   只在 hover 才出现的话，触屏上根本点不到它。 */
+.bg-del {
+  position: absolute; top: -7px; right: -7px;
+  width: 22px; height: 22px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  border: var(--bw) solid var(--border-strong);
+  background: color-mix(in srgb, var(--text) 82%, transparent);
+  color: var(--bg);
+  cursor: pointer; opacity: 0.82;
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.bg-del:hover, .bg-del:focus-visible { opacity: 1; transform: scale(1.1); }
+.bg-del svg { width: 13px; height: 13px; }
+
+/* 添加背景图那一行 */
+.bg-add-row {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+  padding: 6px 0 14px;
+}
 
 /* ---- 界面风格选择器 ----
    两个选项各自画出**自己那套材质**的样子，而不是"当前风格"的样子：

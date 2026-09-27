@@ -2,10 +2,14 @@
  * 项目自带资源（img/ 目录）。
  *
  * 这里的东西不是"用户数据"，而是随应用一起走的静态资源：
- *   img/background —— 页面背景图（用户自己往里放图片即可，默认已放一张）
+ *   img/background —— 页面背景图（默认已放一张；用户也可以自己往里放）
  *   img/logo       —— 页面 logo
  *
- * 它们通过 /img/* 对外提供（见 http.js 的 assetDir 处理）。
+ * 它们通过 /img/* 对外提供（见 http.js 的 resolveAsset 处理）。
+ *
+ * 注意：**用户自己添加**的背景图不在这里，而在数据目录的 背景图/ 下。
+ * 两者由 backgrounds.js 合成同一份列表、共用同一个 URL 前缀，
+ * 所以这个文件只管"随应用走的那些"。
  */
 
 import fs from 'node:fs';
@@ -44,8 +48,11 @@ export function backgroundUrl(name) {
 }
 
 /**
- * 列出可选背景图。
+ * 列出**自带目录**里可选的背景图。
  * 目录不存在时返回空数组——不该因为没有背景图就报错。
+ *
+ * 用户自己添加的图不在这里，见 backgrounds.js 的 listAllBackgrounds：
+ * 那个函数把两边合起来，设置页看到的是合起来之后的结果。
  */
 export function listBackgrounds() {
   let entries = [];
@@ -59,19 +66,4 @@ export function listBackgrounds() {
     .map((e) => e.name)
     .sort((a, b) => a.localeCompare(b, 'zh-CN'))
     .map((name) => ({ name, url: backgroundUrl(name) }));
-}
-
-/**
- * 校验背景图设置是否可用。
- *
- * 只接受「img/background 目录下的纯文件名」：
- * 带路径分隔符、上跳、非图片扩展名、或文件不存在，一律拒绝。
- * 空字符串表示"不使用背景图"，是合法的。
- */
-export function isAllowedBackground(name) {
-  if (name === '') return true;
-  if (typeof name !== 'string') return false;
-  if (name.includes('/') || name.includes('\\') || name.includes('..')) return false;
-  if (!IMAGE_EXTS.has(path.extname(name).toLowerCase())) return false;
-  return fs.existsSync(path.join(backgroundDir(), name));
 }

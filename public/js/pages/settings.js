@@ -33,16 +33,34 @@ function appearanceBlock(settings, backgrounds) {
   // 老版本服务端可能还没有 style 这一项，回落到默认值，别让整页炸掉
   const currentStyle = String(settings.style ?? DEFAULT_STYLE);
 
+  /**
+   * 缩略图列表。
+   *
+   * 自己添加的那张外面多包一层 .bg-slot，角落里挂一个删除按钮——
+   * 不能把删除按钮嵌在缩略图按钮里面（button 套 button 是非法结构，
+   * 浏览器会把它拆开，点删除会变成点选背景图）。
+   */
   const thumbs = [
-    `<button class="bg-thumb bg-thumb-none ${current ? '' : 'active'}" type="button"
-             data-bg-pick="" title="不使用背景图"><span>不使用</span></button>`,
+    `<div class="bg-slot">
+       <button class="bg-thumb bg-thumb-none ${current ? '' : 'active'}" type="button"
+               data-bg-pick="" title="不使用背景图"><span>不使用</span></button>
+     </div>`,
     ...images.map(
       (img) => `
-      <button class="bg-thumb ${current === img.name ? 'active' : ''}" type="button"
-              data-bg-pick="${esc(img.name)}" title="${esc(img.name)}">
-        <img src="${esc(img.url)}" alt="${esc(img.name)}" loading="lazy" decoding="async">
-        ${img.name === defaultImage ? '<span class="bg-badge">默认</span>' : ''}
-      </button>`,
+      <div class="bg-slot">
+        <button class="bg-thumb ${current === img.name ? 'active' : ''}" type="button"
+                data-bg-pick="${esc(img.name)}" title="${esc(img.name)}">
+          <img src="${esc(img.url)}" alt="${esc(img.name)}" loading="lazy" decoding="async">
+          ${img.name === defaultImage ? '<span class="bg-badge">默认</span>' : ''}
+          ${img.user ? '<span class="bg-badge bg-badge-mine">我的</span>' : ''}
+        </button>
+        ${
+          img.user
+            ? `<button class="bg-del" type="button" data-bg-del="${esc(img.name)}"
+                       title="删除「${esc(img.name)}」" aria-label="删除「${esc(img.name)}」">${icons.close}</button>`
+            : ''
+        }
+      </div>`,
     ),
   ].join('');
 
@@ -107,7 +125,9 @@ function appearanceBlock(settings, backgrounds) {
           <div class="s-label">页面背景图</div>
           <div class="s-desc">
             选一张图垫在页面最底层，会以大约一半的透明度透出来。<br>
-            把图片放进项目里的 <span class="mono">img/background</span> 目录，这里就会自动列出来。<br>
+            点「添加背景图」可以从电脑里选一张，图片会存进数据目录的
+            <span class="mono">背景图</span> 文件夹，<strong>只留在本机</strong>；
+            也可以继续把图片放进项目里的 <span class="mono">img/background</span> 目录。<br>
             <span class="muted">「新粗野主义」风格是平的，不看背景图；切回「简约」即恢复。</span>
           </div>
         </div>
@@ -118,11 +138,20 @@ function appearanceBlock(settings, backgrounds) {
       </div>
 
       <div class="bg-picker">${thumbs}</div>
+
+      <div class="bg-add-row">
+        <button class="btn btn-sm" data-bg-add type="button">
+          ${icons.plus}<span>添加背景图</span>
+        </button>
+        <input type="file" accept="image/*" data-bg-file hidden>
+        <span class="text-sm muted">支持 jpg / png / gif / webp / bmp / avif，单张不超过 20MB。</span>
+      </div>
       ${
         images.length
           ? ''
           : `<p class="text-sm muted" style="padding-bottom:12px">
-                img/background 里还没有图片，往里面放一张就会出现在上面。
+               这里还没有图片。点上面的「添加背景图」选一张，
+               或者往项目的 img/background 目录里放一张。
              </p>`
       }
     </div>`;
@@ -146,7 +175,7 @@ function dataBlock(runtime) {
       <div class="settings-row">
         <div>
           <div class="s-label">导出全部数据</div>
-          <div class="s-desc">打包成一个 ZIP 下载（数据库 + 文章 + 计划 + 相册原图）</div>
+          <div class="s-desc">打包成一个 ZIP 下载（数据库 + 文章 + 计划 + 相册原图 + 自定义背景图）</div>
         </div>
         <div class="s-control">
           <button class="btn btn-sm" data-export type="button">${icons.download}<span>导出</span></button>
@@ -450,6 +479,53 @@ export async function pageSettings() {
               state.classList.toggle('is-on', Boolean(name));
             }
             toastSuccess(name ? `背景图已换成 ${name}` : '已关闭页面背景图');
+          } catch (err) {
+            toastError(err.message);
+          }
+        });
+      });
+
+      // 添加背景图：把选中的文件交给本地服务写进数据目录（不上传到任何地方）
+      const bgFile = root.querySelector('[data-bg-file]');
+      root.querySelector('[data-bg-add]')?.addEventListener('click', () => bgFile?.click());
+      bgFile?.addEventListener('change', async () => {
+        const file = bgFile.files?.[0];
+        // 先清空 input，这样连着选同一个文件也会再次触发 change
+        bgFile.value = '';
+        if (!file) return;
+        const form = new FormData();
+        form.append('file', file, file.name);
+        try {
+          const res = await api.uploadBackground(form);
+          // 刚添加的那张直接就用上：用户点"添加背景图"的意思就是要用它。
+          // 状态以服务端回报的设置为准（见 store.update）。
+          await store.update({ backgroundImage: res.added.name });
+          toastSuccess(`已添加并启用：${res.added.name}`);
+          refresh();
+        } catch (err) {
+          toastError(err.message);
+        }
+      });
+
+      // 删除自己添加的背景图
+      root.querySelectorAll('[data-bg-del]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const name = btn.dataset.bgDel;
+          const yes = await confirmDialog({
+            title: '删除背景图',
+            message: `确定要删除「${esc(name)}」吗？<br><br>图片会从数据目录里删掉，这一步不可撤销。`,
+            confirmText: '删除',
+            danger: true,
+          });
+          if (!yes) return;
+          try {
+            const res = await api.deleteBackground(name);
+            // 删掉的如果正是当前在用的那张，服务端会顺手把设置清空并把新值带回来。
+            // 这一步必须跟上：否则页面上那块底图会留在原地——提示说"已关掉"，
+            // 屏幕上却还画着那张（已被删除的）图。
+            store.adopt({ backgroundImage: res.current });
+            toastSuccess(res.cleared ? '已删除，并关掉了页面背景图' : '已删除背景图');
+            refresh();
           } catch (err) {
             toastError(err.message);
           }

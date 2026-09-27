@@ -14,8 +14,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { openDatabase, getAllSettings, setSettings, setSetting, getSetting } from './db.js';
 import { createStorage } from './storage.js';
-import { Router, createServer, HttpError } from './http.js';
+import { Router, createServer, HttpError, safeResolve } from './http.js';
 import { PROJECT_ROOT, saveConfig } from './config.js';
+import { resolveBackgroundAsset } from './backgrounds.js';
 import { mountPostsRoutes } from './routes/posts.js';
 import { mountPlansRoutes } from './routes/plans.js';
 import { mountAlbumsRoutes } from './routes/albums.js';
@@ -105,8 +106,13 @@ export function createApp({ dataRoot, staticDir = path.join(PROJECT_ROOT, 'publi
   const handler = createServer({
     router,
     staticDir,
-    // 项目自带资源（img/logo、img/background）通过 /img/* 访问
-    assetDir: path.join(PROJECT_ROOT, 'img'),
+    // /img/* 的资源解析。
+    // background/ 这一支有**两级目录**：数据目录里的自定义图优先、项目里的 img/ 兜底，
+    // 两者共用同一个 URL 前缀（名字就是地址）。
+    // 其余（logo 等）仍然只认随应用走的 img/。
+    resolveAsset: (relPath) =>
+      resolveBackgroundAsset(dataRoot, relPath) ??
+      safeResolve(path.join(PROJECT_ROOT, 'img'), relPath),
     fileResolver: (pathname) => {
       // /files/<数据目录内的相对路径>
       const rel = pathname.slice('/files/'.length);

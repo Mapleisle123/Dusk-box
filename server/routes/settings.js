@@ -15,11 +15,24 @@ import { getAllSettings } from '../db.js';
 import { createZip, collectDirEntries } from '../zip.js';
 import { backupStamp } from '../backup.js';
 import { getAutostart, setAutostart } from '../autostart.js';
-import { listBackgrounds, isAllowedBackground, DEFAULT_BACKGROUND } from '../assets.js';
+import { DEFAULT_BACKGROUND } from '../assets.js';
+import {
+  USER_BACKGROUND_DIRNAME,
+  listAllBackgrounds,
+  isAllowedBackgroundName,
+  saveUserBackground,
+  removeUserBackground,
+} from '../backgrounds.js';
+import { readInput } from './input.js';
 import { DB_FILENAME } from '../constants.js';
 
-/** 需要纳入导出的分类目录 */
-const EXPORT_DIRS = ['发布', '计划', '相册'];
+/**
+ * 需要纳入导出的目录。
+ *
+ * 背景图也算用户数据：它是用户自己加进来的图片，不在这个清单里的话，
+ * 导出的包拿到别的机器上恢复，设置里那个文件名就指向一张不存在的图。
+ */
+const EXPORT_DIRS = ['发布', '计划', '相册', USER_BACKGROUND_DIRNAME];
 
 /**
  * 允许通过接口修改的设置项。
@@ -52,7 +65,12 @@ export const THEMES = ['akane', 'amber', 'jade', 'azure', 'violet', 'graphite'];
  */
 export const STYLES = ['liquid', 'brutal'];
 
-function validateSettingsPatch(patch) {
+/**
+ * 校验并挑出可写入的设置项。
+ * @param {object} patch 请求体
+ * @param {string} dataRoot 数据根目录（背景图要同时看数据目录与自带目录才知道文件名是否有效）
+ */
+function validateSettingsPatch(patch, dataRoot) {
   const out = {};
   for (const [key, raw] of Object.entries(patch || {})) {
     if (!EDITABLE.has(key)) continue;
@@ -78,8 +96,10 @@ function validateSettingsPatch(patch) {
         throw badRequest('保留份数应为 1~365 之间的整数');
       }
     }
-    if (key === 'backgroundImage' && !isAllowedBackground(value)) {
-      throw badRequest('背景图必须是 img/background 目录里已有的图片文件名（留空表示不使用）');
+    if (key === 'backgroundImage' && !isAllowedBackgroundName(dataRoot, value)) {
+      throw badRequest(
+        '背景图必须是可选列表里的图片文件名（自带的或你自己添加的；留空表示不使用）',
+      );
     }
     out[key] = value;
   }
@@ -140,7 +160,7 @@ export function mountSettingsRoutes(router, ctx) {
   router.put('/api/settings', async ({ req }) => {
     const { readJson } = await import('../http.js');
     const body = await readJson(req);
-    const patch = validateSettingsPatch(body);
+    const patch = validateSettingsPatch(body, ctx.dataRoot);
     if (Object.keys(patch).length === 0) throw badRequest('没有可更新的设置项');
     ctx.setSettings(patch);
     return { settings: getAllSettings(ctx.db) };
@@ -149,15 +169,63 @@ export function mountSettingsRoutes(router, ctx) {
   /**
    * 可选背景图列表 + 当前选择。
    *
-   * 图片来源是项目里的 img/background 目录：往里放图片就会出现在列表里，
-   * 不需要改代码。
+   * 两个来源合成一份列表：
+   *   - 项目里的 img/background（自带，往目录里放图片就会出现在列表里）
+   *   - 数据目录里的 背景图/（用户在这里点「添加背景图」加进来的）
+   * 两者共用同一个 URL 前缀，所以设置里存的仍然是一个纯文件名。
    */
   router.get('/api/backgrounds', () => ({
-    images: listBackgrounds(),
+    images: listAllBackgrounds(ctx.dataRoot),
     // 与 /api/settings 里的 backgroundImage 是同一个值，避免两个接口各说各话
     current: ctx.getSetting('backgroundImage') ?? '',
     defaultImage: DEFAULT_BACKGROUND,
   }));
+
+  /**
+   * 添加一张自定义背景图（multipart，取第一个文件，字段名不限）。
+   *
+   * 图片只会落到本机的数据目录里，**不上传到任何地方**：
+   * 这是一个只跑在 127.0.0.1 上的本地服务，这一步就是把文件写进磁盘。
+   * 只加进列表、不顺手改动当前设置——"我加了一张图"和"我要换成这张"
+   * 是两件事，后者由设置接口单独完成。
+   */
+  router.post('/api/backgrounds', async ({ req }) => {
+    const { files } = await readInput(req);
+    const file = files[0];
+    if (!file) throw badRequest('没有收到图片文件');
+    const added = saveUserBackground(ctx.dataRoot, {
+      buffer: file.buffer,
+      originalName: file.originalName,
+    });
+    return {
+      added,
+      images: listAllBackgrounds(ctx.dataRoot),
+      current: ctx.getSetting('backgroundImage') ?? '',
+    };
+  });
+
+  /**
+   * 删除一张自定义背景图。
+   *
+   * 如果删掉的正是当前在用的那张，就把设置一并清空——
+   * 否则库里会留下一个指向已删除文件的文件名：接口读得出来，
+   * 页面上却是一片空白，而且从此再选"不使用"都修不好它。
+   */
+  router.delete('/api/backgrounds/:name', ({ params }) => {
+    const removed = removeUserBackground(ctx.dataRoot, params.name);
+    let current = ctx.getSetting('backgroundImage') ?? '';
+    const cleared = current === removed.name;
+    if (cleared) {
+      ctx.setSetting('backgroundImage', '');
+      current = '';
+    }
+    return {
+      removed: removed.name,
+      cleared,
+      current,
+      images: listAllBackgrounds(ctx.dataRoot),
+    };
+  });
 
   /**
    * 修改数据目录。

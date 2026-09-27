@@ -281,9 +281,13 @@ function sendFile(res, filePath, { download = false } = {}) {
  * @param {Router} options.router           业务路由（以 /api 开头）
  * @param {string} options.staticDir        前端静态文件目录
  * @param {(url:string)=>string|null} [options.fileResolver] 把 URL 映射到数据目录下的文件
- * @param {string} [options.assetDir]       项目自带资源目录，通过 /img/* 访问（logo、背景图）
+ * @param {(rel:string)=>string|null} [options.resolveAsset]
+ *       把 /img/ 之后的一段路径解析成磁盘文件（logo、背景图）。
+ *       做成钩子而不是写死一个目录，是因为背景图有**两个来源**：
+ *       数据目录里的自定义图优先，项目里的 img/ 兜底，
+ *       而两者共用同一个 URL 前缀（名字就是地址，见 server/backgrounds.js）。
  */
-export function createServer({ router, staticDir, fileResolver, assetDir }) {
+export function createServer({ router, staticDir, fileResolver, resolveAsset }) {
   return async function handleRequest(req, res) {
     let url;
     try {
@@ -325,11 +329,11 @@ export function createServer({ router, staticDir, fileResolver, assetDir }) {
         return;
       }
 
-      // 3. 项目自带资源（img/ 下的 logo 与背景图）。
+      // 3. 项目自带资源 + 用户自定义背景图（都挂在 /img/ 下）。
       //    注意：这里找不到时必须返回 JSON 404，不能回退到 index.html，
       //    否则 <img> 会拿到一段 HTML 而显示成破图。
-      if (assetDir && pathname.startsWith('/img/')) {
-        const target = safeResolve(assetDir, pathname.slice('/img'.length));
+      if (resolveAsset && pathname.startsWith('/img/')) {
+        const target = resolveAsset(pathname.slice('/img'.length));
         if (target && fs.existsSync(target) && fs.statSync(target).isFile()) {
           sendFile(res, target);
           return;

@@ -116,6 +116,9 @@ export const api = {
 
   // ---- 背景图 ----
   listBackgrounds: () => request('GET', '/api/backgrounds'),
+  // 图片走 multipart 交给本地服务落盘（存在数据目录里，不上传到任何地方）
+  uploadBackground: (formData) => request('POST', '/api/backgrounds', { formData }),
+  deleteBackground: (name) => request('DELETE', `/api/backgrounds/${encodeURIComponent(name)}`),
 
   // ---- 备份 ----
   listBackups: () => request('GET', '/api/backups'),

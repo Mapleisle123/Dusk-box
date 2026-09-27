@@ -88,6 +88,23 @@ export const store = {
     this.applyTheme();
     return res.settings;
   },
+
+  /**
+   * 采纳服务端**已经返回**的设置值（不再发写请求）。
+   *
+   * 有些接口会顺手改动设置并把新值一并返回——比如删除正在使用的那张背景图时，
+   * 服务端会把 backgroundImage 清空。这类改动必须在这里跟上：
+   * 不跟的话，页面上那块底图会留在原地（接口说"已关掉"，屏幕上却还画着
+   * 那张已经被删掉的图），而且下一次 applyTheme 还会拿着过期的名字去取一张
+   * 不存在的图。
+   *
+   * 与 update 的分工：update = "我请求写入"，adopt = "服务端已经改了，我跟上"。
+   */
+  adopt(patch) {
+    this.settings = { ...(this.settings || {}), ...patch };
+    this.applyTheme();
+    return this.settings;
+  },
 };
 
 /** 主题可选项（与后端 THEMES 保持一致） */

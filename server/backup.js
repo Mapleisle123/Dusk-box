@@ -15,10 +15,17 @@ import { backup as sqliteBackup } from 'node:sqlite';
 import { nowISO } from './dates.js';
 import { getAllSettings, setSetting } from './db.js';
 import { badRequest, notFound } from './http.js';
+import { USER_BACKGROUND_DIRNAME } from './backgrounds.js';
 import { DB_FILENAME, LEGACY_DB_FILENAME, APP_NAME } from './constants.js';
 
-/** 需要纳入备份的分类目录名 */
-const DATA_DIRS = ['发布', '计划', '相册'];
+/**
+ * 需要纳入备份的分类目录名。
+ *
+ * 自定义背景图也算用户数据，必须一起备份：
+ * 少了它，恢复之后设置里那个文件名会指向一张不存在的图——
+ * 页面上表现为"背景突然变空白"，而且用户自己很难联想到是恢复造成的。
+ */
+const DATA_DIRS = ['发布', '计划', '相册', USER_BACKGROUND_DIRNAME];
 
 /**
  * 在备份目录里找数据库文件，找不到返回 null。

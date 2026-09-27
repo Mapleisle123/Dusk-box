@@ -4,10 +4,11 @@
  * 一条测试如果在"改坏了"之后依然通过，它就不是护栏，只是装饰。
  * 这里逐个植入退化写法，每次只植入一处、跑一次、还原，再植入下一处。
  *
- * 覆盖五个测试文件：
+ * 覆盖六个测试文件：
  *   test/s14-logo.test.js           侧栏徽标（尺寸 / 边框 / 圆角）
  *   test/s17-liquid-glass.test.js   液态玻璃材质
  *   test/s18-style-switch.test.js   外观风格切换（简约 / 新粗野主义）
+ *   test/s20-custom-background.test.js  自定义背景图（添加 / 删除 / 备份）
  *   test/s19-ascii-filenames.test.js  命名护栏（ASCII 侧 / 中文侧）
  *   test/s8-backup.test.js          备份与恢复（含旧文件名兼容）
  *
@@ -154,6 +155,74 @@ const MUTATIONS = [
     expect: '预览图',
   },
 
+  // ---- S20：自定义背景图（添加 / 删除 / 备份）----
+  {
+    name: '把用户添加的背景图存进 img/background（用户要求放在数据目录里）',
+    file: 'server/backgrounds.js',
+    apply: (js) =>
+      js.replace(
+        '  const dir = userBackgroundDir(dataRoot);\n',
+        '  const dir = backgroundDir();\n',
+      ),
+    expect: '落在数据目录里',
+    tests: ['test/s20-custom-background.test.js'],
+  },
+  {
+    name: '给自定义背景图换一个 URL 前缀（"名字就是地址"这条约定被破坏）',
+    file: 'server/backgrounds.js',
+    apply: (js) =>
+      js.replace(
+        '    url: backgroundUrl(name),\n    size: buffer.length,',
+        "    url: `/files/${USER_BACKGROUND_DIRNAME}/${encodeURIComponent(name)}`,\n    size: buffer.length,",
+      ),
+    expect: '沿用 /img/background/',
+    tests: ['test/s20-custom-background.test.js'],
+  },
+  {
+    name: '同名时不唯一化（自带的默认图被顶掉、再也选不中）',
+    file: 'server/backgrounds.js',
+    apply: (js) =>
+      js.replace(
+        '  const name = uniqueNameInDirs([dir, backgroundDir()], base, ext);',
+        '  const name = `${base}${ext}`;',
+      ),
+    expect: '同名时自动改名',
+    tests: ['test/s20-custom-background.test.js'],
+  },
+  {
+    name: '自定义图列表直接返回空（用户加的图在设置页里不见了）',
+    file: 'server/backgrounds.js',
+    apply: (js) => js.replace('  const user = listUserBackgrounds(dataRoot);', '  const user = [];'),
+    expect: '合起来',
+    tests: ['test/s20-custom-background.test.js'],
+  },
+  {
+    name: '删掉正在使用的那张图时不清空设置（留下一个指向空文件的引用）',
+    file: 'server/routes/settings.js',
+    apply: (js) => js.replace('    const cleared = current === removed.name;', '    const cleared = false;'),
+    expect: '悬空引用',
+    tests: ['test/s20-custom-background.test.js'],
+  },
+  {
+    name: '删除背景图后前端不采纳服务端的新值（屏幕上那块底图留在原地）',
+    file: 'public/js/pages/settings.js',
+    apply: (js) =>
+      js.replace('            store.adopt({ backgroundImage: res.current });\n', ''),
+    expect: '跟着清掉',
+    tests: ['test/s20-custom-background.test.js'],
+  },
+  {
+    name: '把自定义背景图排除在备份之外（恢复之后背景图凭空消失）',
+    file: 'server/backup.js',
+    apply: (js) =>
+      js.replace(
+        "const DATA_DIRS = ['发布', '计划', '相册', USER_BACKGROUND_DIRNAME];",
+        "const DATA_DIRS = ['发布', '计划', '相册'];",
+      ),
+    expect: '纳入备份',
+    tests: ['test/s20-custom-background.test.js'],
+  },
+
   // ---- S14：侧栏徽标（加大 + 边框）----
   {
     name: '把徽标改回原来的 32px（用户明确要求加大过）',
@@ -284,7 +353,7 @@ try {
   for (const [f, content] of backups) fs.writeFileSync(rel(f), content, 'utf8');
 }
 
-console.log('\n=== 反向验证（S14 徽标 + S17 液态玻璃 + S18 外观风格 + S19 命名 + S8 备份兼容）===');
+console.log('\n=== 反向验证（S14 徽标 + S17 液态玻璃 + S18 外观风格 + S20 自定义背景图 + S19 命名 + S8 备份兼容）===');
 for (const r of results) console.log(`${r.ok ? '✔' : '✖'} ${r.name}\n    ${r.verdict}`);
 
 const stale = [...backups].filter(([f, content]) => fs.readFileSync(rel(f), 'utf8') !== content).map(([f]) => f);
