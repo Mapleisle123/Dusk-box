@@ -23,8 +23,10 @@ import { mountHomeRoutes } from './routes/home.js';
 import { mountSettingsRoutes } from './routes/settings.js';
 import { mountBackupRoutes } from './routes/backup.js';
 
-/** 数据库文件名 */
-export const DB_FILENAME = '茜色箱.db';
+import { DB_FILENAME, APP_NAME } from './constants.js';
+
+/** 数据库文件名。常量本体在 constants.js，这里再导出是给测试用的。 */
+export { DB_FILENAME };
 
 /**
  * @param {object} options
@@ -87,7 +89,7 @@ export function createApp({ dataRoot, staticDir = path.join(PROJECT_ROOT, 'publi
   // 健康检查：前端用来显示"服务运行中"
   router.get('/api/health', () => ({
     ok: true,
-    app: '茜色箱',
+    app: APP_NAME,
     dataRoot,
     dbPath,
     time: new Date().toISOString(),

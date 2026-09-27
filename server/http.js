@@ -367,7 +367,7 @@ export function createServer({ router, staticDir, fileResolver, assetDir }) {
         sendJson(res, err.status, { error: err.message, details: err.details });
       } else {
         // 未预期错误：记录到控制台便于排查，但不把堆栈暴露给界面
-        console.error('[茜色箱] 未处理错误：', err);
+        console.error('[Dusk Box] 未处理错误：', err);
         sendJson(res, 500, { error: err?.message || '服务器内部错误' });
       }
     }

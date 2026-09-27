@@ -15,9 +15,24 @@ import { backup as sqliteBackup } from 'node:sqlite';
 import { nowISO } from './dates.js';
 import { getAllSettings, setSetting } from './db.js';
 import { badRequest, notFound } from './http.js';
+import { DB_FILENAME, LEGACY_DB_FILENAME, APP_NAME } from './constants.js';
 
 /** 需要纳入备份的分类目录名 */
 const DATA_DIRS = ['发布', '计划', '相册'];
+
+/**
+ * 在备份目录里找数据库文件，找不到返回 null。
+ *
+ * 为什么要兼容两个名字：2026-09-27 之前生成的备份里叫 LEGACY_DB_FILENAME，
+ * 之后叫 DB_FILENAME。只认新名的话，用户所有的旧备份会瞬间变成"缺少数据库文件，无法恢复"。
+ */
+function findBackupDb(dir) {
+  for (const name of [DB_FILENAME, LEGACY_DB_FILENAME]) {
+    const p = path.join(dir, name);
+    if (fs.existsSync(p)) return p;
+  }
+  return null;
+}
 
 /** 时间戳：2026-09-24_233000 */
 export function backupStamp(date = new Date()) {
@@ -88,7 +103,7 @@ export async function createBackup(ctx, { date = new Date(), reason = 'manual' }
   fs.mkdirSync(target, { recursive: true });
 
   // 1. 数据库
-  const dbTarget = path.join(target, '茜色箱.db');
+  const dbTarget = path.join(target, DB_FILENAME);
   let dbBytes = 0;
   try {
     ctx.db.exec('PRAGMA wal_checkpoint(TRUNCATE);');
@@ -120,7 +135,7 @@ export async function createBackup(ctx, { date = new Date(), reason = 'manual' }
     dataRoot: ctx.dataRoot,
     dbBytes,
     fileCount,
-    app: '茜色箱',
+    app: APP_NAME,
   };
   fs.writeFileSync(path.join(target, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf8');
 
@@ -157,7 +172,7 @@ export function listBackups(ctx) {
         dbBytes: manifest.dbBytes ?? 0,
         fileCount: stats.files,
         totalBytes: stats.bytes,
-        hasDb: fs.existsSync(path.join(dir, '茜色箱.db')),
+        hasDb: !!findBackupDb(dir),
       };
     })
     .sort((a, b) => (a.name < b.name ? 1 : -1));
@@ -188,8 +203,8 @@ export function restoreBackup(ctx, name) {
   if (!dir.startsWith(root)) throw badRequest('备份名称非法');
   if (!fs.existsSync(dir)) throw notFound(`备份不存在：${safeName}`);
 
-  const dbSource = path.join(dir, '茜色箱.db');
-  if (!fs.existsSync(dbSource)) throw badRequest('该备份中缺少数据库文件，无法恢复');
+  const dbSource = findBackupDb(dir);
+  if (!dbSource) throw badRequest('该备份中缺少数据库文件，无法恢复');
 
   // Windows 上数据库文件被占用时无法覆盖，必须先关闭句柄
   const wasOpen = !!ctx.db;
@@ -265,9 +280,9 @@ export function startScheduler(ctx, { intervalMs = 60_000 } = {}) {
     running = true;
     try {
       const result = await maybeRunScheduledBackup(ctx, new Date());
-      if (result) console.log(`[茜色箱] 已完成自动备份：${result.name}`);
+      if (result) console.log(`[Dusk Box] 已完成自动备份：${result.name}`);
     } catch (err) {
-      console.error('[茜色箱] 自动备份失败：', err);
+      console.error('[Dusk Box] 自动备份失败：', err);
     } finally {
       running = false;
     }

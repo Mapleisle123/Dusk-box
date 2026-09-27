@@ -1,7 +1,7 @@
 /**
- * 茜色箱 · 服务入口。
+ * Dusk Box（茜色箱） · 服务入口。
  *
- * 双击 茜色箱启动.bat 最终运行的就是这个文件：
+ * 双击 DuskBox-start.bat 最终运行的就是这个文件：
  *   1. 读取配置（数据目录、端口）
  *   2. 装配应用
  *   3. 监听端口，并自动打开浏览器
@@ -55,17 +55,17 @@ async function main() {
       }
     }
     if (!found) {
-      console.error(`[茜色箱] 端口 ${config.port} 及其后 20 个端口都被占用，请关闭其他程序后重试。`);
+      console.error(`[Dusk Box] 端口 ${config.port} 及其后 20 个端口都被占用，请关闭其他程序后重试。`);
       process.exit(1);
     }
-    console.log(`[茜色箱] 端口 ${config.port} 被占用，改用 ${port}。`);
+    console.log(`[Dusk Box] 端口 ${config.port} 被占用，改用 ${port}。`);
   }
 
   const server = http.createServer(app.handler);
   server.listen(port, '127.0.0.1', () => {
     const url = `http://localhost:${port}`;
     console.log('');
-    console.log('  茜色箱 已启动');
+    console.log('  Dusk Box 已启动');
     console.log(`  访问地址：${url}`);
     console.log(`  数据目录：${app.dataRoot}`);
     console.log('  关闭此窗口即停止服务（数据不会丢失）');
@@ -75,7 +75,7 @@ async function main() {
   });
 
   const shutdown = () => {
-    console.log('\n[茜色箱] 正在关闭…');
+    console.log('\n[Dusk Box] 正在关闭…');
     // 先切断空闲的 keep-alive 连接，否则 server.close() 会一直等它们超时
     if (typeof server.closeAllConnections === 'function') server.closeAllConnections();
     server.close(() => {
@@ -90,14 +90,14 @@ async function main() {
 
   // 未捕获异常不要让进程静默死掉，明确报出来
   process.on('uncaughtException', (err) => {
-    console.error('[茜色箱] 发生未捕获异常：', err);
+    console.error('[Dusk Box] 发生未捕获异常：', err);
   });
   process.on('unhandledRejection', (err) => {
-    console.error('[茜色箱] 发生未处理的 Promise 拒绝：', err);
+    console.error('[Dusk Box] 发生未处理的 Promise 拒绝：', err);
   });
 }
 
 main().catch((err) => {
-  console.error('[茜色箱] 启动失败：', err);
+  console.error('[Dusk Box] 启动失败：', err);
   process.exit(1);
 });

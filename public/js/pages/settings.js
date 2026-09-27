@@ -284,7 +284,7 @@ function changeDataRootDialog(currentRoot) {
     body: `
       <div class="field">
         <label for="new-root">新的数据目录（绝对路径）</label>
-        <input class="input" id="new-root" type="text" placeholder="例如：D:\\茜色箱" autocomplete="off">
+        <input class="input" id="new-root" type="text" placeholder="例如：D:\\DuskBox" autocomplete="off">
         <span class="hint">当前目录：<span class="mono">${esc(currentRoot)}</span></span>
       </div>
       <div class="field">

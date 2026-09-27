@@ -2,8 +2,8 @@
  * 开机自动启动。
  *
  * 机制与项目根目录的两个 .bat 完全一致：
- *   在 Windows「启动」文件夹里放一个指向「茜色箱启动.bat」的快捷方式。
- *   （安装开机自启.bat 建它，取消开机自启.bat 删它。）
+ *   在 Windows「启动」文件夹里放一个指向「DuskBox-start.bat」的快捷方式。
+ *   （DuskBox-autostart-on.bat 建它，DuskBox-autostart-off.bat 删它。）
  *
  * 关键设计：**唯一事实来源是快捷方式文件本身**，不是数据库里的开关值。
  * 好处是「设置页里的开关」与「手动双击 bat」操作的是同一个产物，
@@ -17,13 +17,13 @@ import { execFile } from 'node:child_process';
 import { PROJECT_ROOT } from './config.js';
 
 /** 快捷方式文件名（与「安装开机自启.bat」中保持一致） */
-export const SHORTCUT_NAME = '茜色箱.lnk';
+export const SHORTCUT_NAME = 'DuskBox.lnk';
 
 /** 快捷方式指向的启动脚本 */
-export const LAUNCHER_NAME = '茜色箱启动.bat';
+export const LAUNCHER_NAME = 'DuskBox-start.bat';
 
 /** 快捷方式说明文字 */
-const SHORTCUT_DESC = '茜色箱 · 开机自动启动本地服务';
+const SHORTCUT_DESC = 'Dusk Box · 开机自动启动本地服务';
 
 /** 是否支持（快捷方式机制为 Windows 特有） */
 export function autostartSupported() {

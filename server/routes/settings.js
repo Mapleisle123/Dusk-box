@@ -16,6 +16,7 @@ import { createZip, collectDirEntries } from '../zip.js';
 import { backupStamp } from '../backup.js';
 import { getAutostart, setAutostart } from '../autostart.js';
 import { listBackgrounds, isAllowedBackground, DEFAULT_BACKGROUND } from '../assets.js';
+import { DB_FILENAME } from '../constants.js';
 
 /** 需要纳入导出的分类目录 */
 const EXPORT_DIRS = ['发布', '计划', '相册'];
@@ -167,7 +168,7 @@ export function mountSettingsRoutes(router, ctx) {
     const body = await readJson(req);
     const target = String(body.dataRoot ?? '').trim();
     if (!target) throw badRequest('数据目录不能为空');
-    if (!path.isAbsolute(target)) throw badRequest('请提供绝对路径，例如 D:\\茜色箱');
+    if (!path.isAbsolute(target)) throw badRequest('请提供绝对路径，例如 D:\\DuskBox');
 
     const current = ctx.dataRoot;
     if (path.resolve(target) === path.resolve(current)) {
@@ -196,7 +197,7 @@ export function mountSettingsRoutes(router, ctx) {
         }
       }
       // 数据库最后复制（保证数据文件已就位）
-      fs.copyFileSync(ctx.dbPath, path.join(target, '茜色箱.db'));
+      fs.copyFileSync(ctx.dbPath, path.join(target, DB_FILENAME));
     } else {
       fs.mkdirSync(target, { recursive: true });
     }
@@ -230,7 +231,7 @@ export function mountSettingsRoutes(router, ctx) {
     const entries = [];
     try {
       entries.push({
-        name: '茜色箱.db',
+        name: DB_FILENAME,
         data: fs.readFileSync(ctx.dbPath),
         mtime: fs.statSync(ctx.dbPath).mtime,
       });
@@ -243,7 +244,7 @@ export function mountSettingsRoutes(router, ctx) {
     }
 
     const zip = createZip(entries);
-    const filename = `茜色箱-导出-${backupStamp()}.zip`;
+    const filename = `DuskBox-导出-${backupStamp()}.zip`;
 
     res.writeHead(200, {
       'Content-Type': 'application/zip',

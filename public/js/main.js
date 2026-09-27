@@ -57,7 +57,7 @@ async function render(route) {
   try {
     result.mount?.(view);
   } catch (err) {
-    console.error('[茜色箱] 页面挂载出错：', err);
+    console.error('[Dusk Box] 页面挂载出错：', err);
   }
 }
 
@@ -137,7 +137,7 @@ async function bootstrap() {
         <div class="empty">
           <div class="empty-mark">${icons.info}</div>
           <div class="empty-title">无法连接到本地服务</div>
-          <div class="empty-desc">${esc(err.message)}<br>请确认「茜色箱启动.bat」正在运行。</div>
+          <div class="empty-desc">${esc(err.message)}<br>请确认「DuskBox-start.bat」正在运行。</div>
           <button class="btn btn-primary" data-retry type="button">重试连接</button>
         </div>
       </div>`;
