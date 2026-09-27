@@ -18,6 +18,7 @@ process.env.QSX_CONFIG_FILE = path.join(configHome, 'config.json');
 
 const { startTestServer, ok, makePng } = await import('./helpers.js');
 const { THEMES } = await import('../server/routes/settings.js');
+const { DB_FILENAME } = await import('../server/constants.js');
 
 test.after(() => {
   delete process.env.QSX_CONFIG_FILE;
@@ -31,7 +32,7 @@ test('S6 · 读取设置时同时返回运行期信息', async (t) => {
   const body = ok(await srv.get('/api/settings'));
   assert.ok(body.settings, '应返回设置');
   assert.equal(body.runtime.dataRoot, srv.dataRoot);
-  assert.ok(body.runtime.dbPath.endsWith('茜色箱.db'));
+  assert.ok(body.runtime.dbPath.endsWith(DB_FILENAME));
   assert.deepEqual(body.runtime.themes, THEMES, '应返回可选主题列表');
   assert.ok(body.runtime.projectRoot, '应返回项目根目录');
 });
@@ -132,7 +133,7 @@ test('S6 · 数据目录变更：会迁移数据并写入配置', async (t) => {
   );
   ok(await srv.post('/api/albums', { name: '迁移相册' }));
 
-  const target = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'qsx-newroot-')), '茜色箱数据');
+  const target = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'qsx-newroot-')), 'DuskBox数据');
   t.after(() => fs.rmSync(path.dirname(target), { recursive: true, force: true }));
 
   const res = ok(await srv.put('/api/settings/data-root', { dataRoot: target }));
@@ -143,7 +144,7 @@ test('S6 · 数据目录变更：会迁移数据并写入配置', async (t) => {
   assert.equal(res.dataRoot, path.resolve(target));
 
   // 数据库与分类目录都被搬过去了
-  assert.ok(fs.existsSync(path.join(target, '茜色箱.db')), '数据库应被迁移');
+  assert.ok(fs.existsSync(path.join(target, DB_FILENAME)), '数据库应被迁移');
   assert.ok(
     fs.existsSync(path.join(target, '发布', '2026', '2026-09-23 迁移前.md')),
     '文章文件应被迁移',

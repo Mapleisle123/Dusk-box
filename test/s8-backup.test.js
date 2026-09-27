@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { startTestServer, ok, makePng } from './helpers.js';
 import { maybeRunScheduledBackup, backupStamp } from '../server/backup.js';
+import { DB_FILENAME, LEGACY_DB_FILENAME, APP_NAME } from '../server/constants.js';
 
 const TODAY = '2026-09-23';
 
@@ -61,13 +62,13 @@ test('S8 · 备份会生成完整目录：数据库 + 分类文件 + 清单', as
   assert.ok(backup.fileCount > 0, '应备份到分类文件');
 
   const rel = `${backup.relDir}`;
-  assert.ok(srv.existsData(`${rel}/茜色箱.db`), '备份里应有数据库');
+  assert.ok(srv.existsData(`${rel}/${DB_FILENAME}`), '备份里应有数据库');
   assert.ok(srv.existsData(`${rel}/manifest.json`), '备份里应有清单');
   assert.ok(srv.existsData(`${rel}/发布/2026/2026-09-23 备份测试文章.md`), '备份里应有文章');
   assert.ok(srv.existsData(`${rel}/相册/备份相册/leaf.png`), '备份里应有相册图片');
 
   const manifest = JSON.parse(srv.readDataFile(`${rel}/manifest.json`));
-  assert.equal(manifest.app, '茜色箱');
+  assert.equal(manifest.app, APP_NAME);
   assert.ok(manifest.createdAt);
 });
 
@@ -120,6 +121,39 @@ test('S8 · 恢复能把改动过的数据还原回去', async (t) => {
   assert.equal(list.total, 1);
   assert.equal(list.items[0].title, '备份测试文章');
   assert.equal(list.items[0].content, '这段内容必须能被恢复');
+});
+
+test('S8 · 改名前生成的历史备份仍能列出并恢复', async (t) => {
+  const srv = await startTestServer();
+  t.after(() => srv.close());
+
+  const { post } = await seed(srv);
+  const backup = ok(await srv.post('/api/backups', {})).backup;
+  const relDir = backup.relDir;
+
+  // 把备份里的数据库改回 2026-09-27 改名前的名字，模拟历史备份
+  fs.renameSync(
+    path.join(srv.dataRoot, relDir, DB_FILENAME),
+    path.join(srv.dataRoot, relDir, LEGACY_DB_FILENAME),
+  );
+  assert.equal(srv.existsData(`${relDir}/${DB_FILENAME}`), false, '此刻应只剩旧文件名');
+
+  // 列表里必须仍认为它含数据库，否则用户会以为旧备份作废了
+  const { backups } = ok(await srv.get('/api/backups'));
+  const item = backups.find((b) => b.name === backup.name);
+  assert.ok(item, '旧备份应仍在列表中');
+  assert.equal(item.hasDb, true, '旧文件名的备份也必须识别为含数据库');
+
+  // 破坏现有数据，再从这个旧备份恢复
+  ok(await srv.del(`/api/posts/${post.id}`));
+  assert.equal(ok(await srv.get('/api/posts')).total, 0);
+
+  const restored = ok(await srv.post('/api/backups/restore', { name: backup.name }));
+  assert.equal(restored.ok, true);
+
+  const list = ok(await srv.get('/api/posts'));
+  assert.equal(list.total, 1, '旧备份里的数据应被恢复');
+  assert.equal(list.items[0].title, '备份测试文章');
 });
 
 test('S8 · 恢复后服务仍然可用（数据库句柄已正确重开）', async (t) => {

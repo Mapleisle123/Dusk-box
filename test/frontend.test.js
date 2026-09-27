@@ -201,7 +201,7 @@ test('导出 · 产出合法的 ZIP，且包含数据库与分类文件', async 
   // 中央目录里的文件名是明文，直接查找关键条目
   const asText = buf.toString('utf8');
   for (const expected of [
-    '茜色箱.db',
+    'duskbox.db',
     '发布/2026/2026-09-23 导出测试.md',
     '相册/导出相册/leaf.png',
     '计划/导出计划.md',

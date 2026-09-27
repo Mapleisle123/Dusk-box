@@ -6,7 +6,7 @@
  *
  * 因此重点验证三件事：
  *   1. 开关真的能在磁盘上建出/删掉快捷方式；
- *   2. 建出来的快捷方式确实指向「茜色箱启动.bat」（与两个 .bat 脚本等效）；
+ *   2. 建出来的快捷方式确实指向「DuskBox-start.bat」（与两个 .bat 脚本等效）；
  *   3. 别人（手动双击 bat）放进去的快捷方式，应用也能识别出来——
  *      这正是"界面开关"与"手动点 bat"两种方式并存的关键。
  *
@@ -25,7 +25,7 @@ const startupRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qsx-startup-'));
 process.env.QSX_STARTUP_DIR = startupRoot;
 
 const { startTestServer, ok } = await import('./helpers.js');
-const { SHORTCUT_NAME, launcherPath } = await import('../server/autostart.js');
+const { SHORTCUT_NAME, LAUNCHER_NAME, launcherPath } = await import('../server/autostart.js');
 
 const IS_WINDOWS = process.platform === 'win32';
 const linkPath = () => path.join(startupRoot, SHORTCUT_NAME);
@@ -127,7 +127,7 @@ test('S10 · 开启后真的在启动文件夹生成快捷方式，且指向启�
   assert.equal(
     path.resolve(sc.target),
     path.resolve(launcherPath()),
-    '快捷方式应指向「茜色箱启动.bat」——与手动双击安装脚本的效果一致',
+    `快捷方式应指向「${LAUNCHER_NAME}」——与手动双击安装脚本的效果一致`,
   );
   assert.equal(path.resolve(sc.workingDir), path.resolve(path.dirname(launcherPath())));
   assert.equal(sc.windowStyle, '7', '应为最小化启动（7），否则开机时会弹出一个黑窗口');

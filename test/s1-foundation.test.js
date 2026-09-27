@@ -12,6 +12,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { startTestServer, ok, PUBLIC_DIR } from './helpers.js';
 import { createApp, DB_FILENAME } from '../server/app.js';
+import { APP_NAME } from '../server/constants.js';
 import { loadConfig, DEFAULT_DATA_ROOT } from '../server/config.js';
 
 test('S1 · 健康检查可用，报告数据目录与数据库路径', async (t) => {
@@ -20,7 +21,7 @@ test('S1 · 健康检查可用，报告数据目录与数据库路径', async (t
 
   const body = ok(await srv.get('/api/health'), '健康检查');
   assert.equal(body.ok, true);
-  assert.equal(body.app, '茜色箱');
+  assert.equal(body.app, APP_NAME);
   assert.equal(body.dataRoot, srv.dataRoot);
   assert.ok(body.dbPath.endsWith(DB_FILENAME));
 });

@@ -2,7 +2,7 @@
  * S9 启动器测试。
  *
  * 这一组测试不模拟，而是真的把 server/index.js 当独立进程启动一次，
- * 验证「双击 茜色箱启动.bat」这条链路真的能跑通：
+ * 验证「双击 DuskBox-start.bat」这条链路真的能跑通：
  *   - Node 能找到入口文件
  *   - 配置文件被正确读取，数据目录自动建立
  *   - 端口监听成功并能响应请求
@@ -17,6 +17,8 @@ import path from 'node:path';
 import net from 'node:net';
 import { spawn } from 'node:child_process';
 import { PROJECT_ROOT } from '../server/config.js';
+import { DB_FILENAME } from '../server/constants.js';
+import { LAUNCHER_NAME, SHORTCUT_NAME } from '../server/autostart.js';
 
 const ENTRY = path.join(PROJECT_ROOT, 'server', 'index.js');
 
@@ -123,7 +125,12 @@ async function cleanup(srv, ...dirs) {
 }
 
 test('S9 · 启动脚本与配套文件齐备', () => {
-  for (const name of ['茜色箱启动.bat', '安装开机自启.bat', '取消开机自启.bat', 'package.json']) {
+  for (const name of [
+    LAUNCHER_NAME,
+    'DuskBox-autostart-on.bat',
+    'DuskBox-autostart-off.bat',
+    'package.json',
+  ]) {
     assert.ok(fs.existsSync(path.join(PROJECT_ROOT, name)), `应存在 ${name}`);
   }
 
@@ -131,7 +138,7 @@ test('S9 · 启动脚本与配套文件齐备', () => {
   const readBat = (name) =>
     new TextDecoder('gbk').decode(fs.readFileSync(path.join(PROJECT_ROOT, name)));
 
-  const launcher = readBat('茜色箱启动.bat');
+  const launcher = readBat(LAUNCHER_NAME);
   assert.ok(launcher.includes('server\\index.js'), '启动脚本应指向服务入口');
   assert.ok(launcher.includes('where node'), '启动脚本应查找 node');
   assert.ok(
@@ -139,12 +146,12 @@ test('S9 · 启动脚本与配套文件齐备', () => {
     '启动 Node 之前应切到 65001，否则 Node 的 UTF-8 中文输出在本地代码页下会乱码',
   );
 
-  const autoStart = readBat('安装开机自启.bat');
+  const autoStart = readBat('DuskBox-autostart-on.bat');
   assert.ok(autoStart.includes('Startup'), '开机自启脚本应写入启动文件夹');
-  assert.ok(autoStart.includes('茜色箱启动.bat'), '自启脚本应指向启动脚本');
+  assert.ok(autoStart.includes(LAUNCHER_NAME), '自启脚本应指向启动脚本');
 
-  const uninstall = readBat('取消开机自启.bat');
-  assert.ok(uninstall.includes('茜色箱.lnk'), '取消脚本应删除对应快捷方式');
+  const uninstall = readBat('DuskBox-autostart-off.bat');
+  assert.ok(uninstall.includes(SHORTCUT_NAME), '取消脚本应删除对应快捷方式');
 });
 
 /**
@@ -162,14 +169,16 @@ test('S9 · 启动脚本与配套文件齐备', () => {
 test('S9 · 三个 bat 必须是 GBK 编码 + CRLF 行尾，且不带 BOM', () => {
   const gbk = new TextDecoder('gbk');
 
-  for (const name of ['茜色箱启动.bat', '安装开机自启.bat', '取消开机自启.bat']) {
+  for (const name of [LAUNCHER_NAME, 'DuskBox-autostart-on.bat', 'DuskBox-autostart-off.bat']) {
     const buf = fs.readFileSync(path.join(PROJECT_ROOT, name));
 
     // 编码：cmd 在 936 代码页下逐字节解析脚本，文件必须是 GBK 才能对上。
     // 用 GBK 解码能读回中文，就说明存的是 GBK；存成 UTF-8 时这里会是乱码。
     const text = gbk.decode(buf);
+    // 用"能否解出汉字"而不是"是否包含某个词"来判断：
+    // 三个脚本的措辞不同，共有的只是"它们是中文脚本"这件事。
     assert.ok(
-      text.includes('茜色箱'),
+      /[一-龥]/.test(text),
       `${name} 应以 GBK(本地代码页) 编码保存；当前用 GBK 解码读不出中文，说明编码不对`,
     );
 
@@ -207,7 +216,7 @@ test(
     const dataRoot = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'qsx-bat-')), 'data');
     const port = await freePort();
     const cfg = tempConfig(dataRoot, port);
-    const batPath = path.join(PROJECT_ROOT, '茜色箱启动.bat');
+    const batPath = path.join(PROJECT_ROOT, LAUNCHER_NAME);
 
     const child = spawn('cmd.exe', ['/c', batPath], {
       cwd: PROJECT_ROOT,
@@ -314,7 +323,7 @@ test('S9 · 真实启动入口：能监听端口并响应请求，自动建立�
   for (const dir of ['发布', '计划', '相册', '备份']) {
     assert.ok(fs.existsSync(path.join(dataRoot, dir)), `应创建 ${dir} 目录`);
   }
-  assert.ok(fs.existsSync(path.join(dataRoot, '茜色箱.db')), '应创建数据库文件');
+  assert.ok(fs.existsSync(path.join(dataRoot, DB_FILENAME)), '应创建数据库文件');
 
   // 首页可访问
   const home = await (await fetch(`${srv.base}/api/home`)).json();

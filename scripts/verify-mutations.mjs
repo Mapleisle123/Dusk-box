@@ -4,10 +4,15 @@
  * 一条测试如果在"改坏了"之后依然通过，它就不是护栏，只是装饰。
  * 这里逐个植入退化写法，每次只植入一处、跑一次、还原，再植入下一处。
  *
- * 覆盖三个测试文件：
+ * 覆盖五个测试文件：
  *   test/s14-logo.test.js           侧栏徽标（尺寸 / 边框 / 圆角）
  *   test/s17-liquid-glass.test.js   液态玻璃材质
  *   test/s18-style-switch.test.js   外观风格切换（简约 / 新粗野主义）
+ *   test/s19-ascii-filenames.test.js  命名护栏（ASCII 侧 / 中文侧）
+ *   test/s8-backup.test.js          备份与恢复（含旧文件名兼容）
+ *
+ * 每条植入可以用 `tests` 指定只跑相关的测试文件；不写就跑默认的三个。
+ * 后两个文件跑起来比前三个慢，所以只让需要它们的植入去跑。
  *
  * 注意：**锚点字符串会跟着代码一起过期。** 上一版脚本里钉的还是
  * `--pane-card: … 58%` 和 `--text-3: #7B8393`，而在玻璃重构里这两个值都改过，
@@ -184,6 +189,37 @@ const MUTATIONS = [
       ),
     expect: '同源',
   },
+
+  // ---- S19：命名护栏（ASCII 侧不许退回中文，中文侧不许被改掉）----
+  {
+    name: '把数据库文件名退回中文名',
+    file: 'server/constants.js',
+    apply: (js) => js.replace("export const DB_FILENAME = 'duskbox.db';", "export const DB_FILENAME = '茜色箱.db';"),
+    expect: '数据库文件名与启动脚本常量',
+    tests: ['test/s19-ascii-filenames.test.js'],
+  },
+  {
+    name: '把启动脚本名退回中文名',
+    file: 'server/autostart.js',
+    apply: (js) =>
+      js.replace("export const LAUNCHER_NAME = 'DuskBox-start.bat';", "export const LAUNCHER_NAME = '茜色箱启动.bat';"),
+    expect: '三个启动脚本齐备',
+    tests: ['test/s19-ascii-filenames.test.js'],
+  },
+  {
+    name: '把界面标题也改成英文（用户看到的中文名被悄悄换掉）',
+    file: 'public/index.html',
+    apply: (html) => html.replace('<title>茜色箱</title>', '<title>Dusk Box</title>'),
+    expect: '界面仍然显示中文名',
+    tests: ['test/s19-ascii-filenames.test.js'],
+  },
+  {
+    name: '恢复备份时不再兼容旧的中文文件名（历史备份全作废）',
+    file: 'server/backup.js',
+    apply: (js) => js.replace('  for (const name of [DB_FILENAME, LEGACY_DB_FILENAME]) {', '  for (const name of [DB_FILENAME]) {'),
+    expect: '改名前生成的历史备份',
+    tests: ['test/s8-backup.test.js'],
+  },
   {
     name: '把浅色下的 --border-strong 调成透明（边框在浅色下消失）',
     file: 'public/css/app.css',
@@ -193,9 +229,9 @@ const MUTATIONS = [
   },
 ];
 
-function runTest() {
+function runTest(files = TEST_FILES) {
   try {
-    execFileSync(process.execPath, ['--test', '--test-reporter=spec', ...TEST_FILES], {
+    execFileSync(process.execPath, ['--test', '--test-reporter=spec', ...files], {
       cwd: ROOT,
       stdio: 'pipe',
       encoding: 'utf8',
@@ -224,7 +260,7 @@ try {
     }
 
     fs.writeFileSync(rel(m.file), mutated, 'utf8');
-    const res = runTest();
+    const res = runTest(m.tests);
 
     let verdict;
     let ok;
@@ -248,7 +284,7 @@ try {
   for (const [f, content] of backups) fs.writeFileSync(rel(f), content, 'utf8');
 }
 
-console.log('\n=== 反向验证（S14 徽标 + S17 液态玻璃 + S18 外观风格）===');
+console.log('\n=== 反向验证（S14 徽标 + S17 液态玻璃 + S18 外观风格 + S19 命名 + S8 备份兼容）===');
 for (const r of results) console.log(`${r.ok ? '✔' : '✖'} ${r.name}\n    ${r.verdict}`);
 
 const stale = [...backups].filter(([f, content]) => fs.readFileSync(rel(f), 'utf8') !== content).map(([f]) => f);
