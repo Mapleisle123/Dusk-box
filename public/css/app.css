@@ -26,6 +26,13 @@
   --radius: 14px;
   --radius-lg: 20px;
   --radius-xl: 28px;
+
+  /* 侧栏徽标（印章 / logo）的尺寸与圆角。
+     单独抽成令牌，是因为它有 3 处引用：印章本体、印章的三道横线、以及铺在上面的图片。
+     各写各的 px 一旦不同步（改大尺寸却忘了改圆角），切换 logo 与兜底印章时圆角就会跳变。 */
+  --brand-size: 40px;
+  --brand-radius: 11px;
+
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -568,9 +575,16 @@ button, input, textarea, select {
 }
 
 /* 印章：方圆形 + 朱色底 + 三道横线（"箱"的意象），略微内凹的质感。
-   这套样式同时也是**兜底**——img/logo 里的图片缺失时会退回它。 */
+   这套样式同时也是**兜底**——img/logo 里的图片缺失时会退回它。
+
+   边框用 `--bw` + `--border-strong`，一条声明在 24 种组合下都成立：
+   简约浅色 = 1px 压深的发丝线，简约深色 = 1px 亮线，粗野主义 = 2px 实墨。
+   这里**不能**用 `--pane-edge`：那是"玻璃面板边缘的高光白线"，
+   浅色下是 rgba(255,255,255,.66)，压在近白的玻璃上基本看不见，起不到边框的作用。 */
 .brand-mark {
-  width: 32px; height: 32px; border-radius: 9px;
+  width: var(--brand-size); height: var(--brand-size);
+  border-radius: var(--brand-radius);
+  border: var(--bw) solid var(--border-strong);
   background: linear-gradient(160deg,
     color-mix(in srgb, var(--primary) 88%, #fff) 0%,
     var(--primary) 55%,
@@ -586,19 +600,26 @@ button, input, textarea, select {
     linear-gradient(to bottom, transparent 0 30%, rgba(255,255,255,.92) 30% 38%, transparent 38%),
     linear-gradient(to bottom, transparent 0 46%, rgba(255,255,255,.92) 46% 54%, transparent 54%),
     linear-gradient(to bottom, transparent 0 62%, rgba(255,255,255,.92) 62% 70%, transparent 70%);
-  border-radius: 9px;
+  border-radius: var(--brand-radius);
   mask: linear-gradient(to right, transparent 0 30%, #000 30% 70%, transparent 70%);
   -webkit-mask: linear-gradient(to right, transparent 0 30%, #000 30% 70%, transparent 70%);
 }
 
 /* ---- 页面 logo ----
-   图片铺满印章那个 32px 方框，圆角与印章保持一致。
+   图片铺满印章那个方框。尺寸与圆角都取自 `--brand-size` / `--brand-radius`，与印章同源。
+   边框由 `.brand-mark` 提供，图片自己不再描边。
+
+   圆角写成「印章圆角 − 边框宽度」而不是直接照抄印章圆角：
+   加了边框之后，内层实际可用的是 padding box，它的圆角比 border-radius 小一个边框宽
+   （11−1=10）。图片若仍用 11，两个角就**不同心**，四个角会各露出一小瓣玻璃。
+   这条正是同心圆角的标准算法。
+
    图片本就在印章底纹之上，但印章那三道横线是伪元素、会画在图片上层，
    所以加载成功后由 main.js 打上 has-logo，把它们让开（否则白线会压在画面上）。 */
 .brand-logo {
   display: block;
   width: 100%; height: 100%;
-  border-radius: 9px;
+  border-radius: calc(var(--brand-radius) - var(--bw));
   object-fit: cover;
 }
 .brand-mark.has-logo {

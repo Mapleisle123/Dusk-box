@@ -4,7 +4,8 @@
  * 一条测试如果在"改坏了"之后依然通过，它就不是护栏，只是装饰。
  * 这里逐个植入退化写法，每次只植入一处、跑一次、还原，再植入下一处。
  *
- * 覆盖两个测试文件：
+ * 覆盖三个测试文件：
+ *   test/s14-logo.test.js           侧栏徽标（尺寸 / 边框 / 圆角）
  *   test/s17-liquid-glass.test.js   液态玻璃材质
  *   test/s18-style-switch.test.js   外观风格切换（简约 / 新粗野主义）
  *
@@ -22,7 +23,11 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const TEST_FILES = ['test/s17-liquid-glass.test.js', 'test/s18-style-switch.test.js'];
+const TEST_FILES = [
+  'test/s14-logo.test.js',
+  'test/s17-liquid-glass.test.js',
+  'test/s18-style-switch.test.js',
+];
 
 const rel = (p) => path.join(ROOT, ...p.split('/'));
 
@@ -143,6 +148,49 @@ const MUTATIONS = [
       css.replace('html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }\n', ''),
     expect: '预览图',
   },
+
+  // ---- S14：侧栏徽标（加大 + 边框）----
+  {
+    name: '把徽标改回原来的 32px（用户明确要求加大过）',
+    file: 'public/css/app.css',
+    apply: (css) => css.replace('  --brand-size: 40px;', '  --brand-size: 32px;'),
+    expect: '徽标已加大',
+  },
+  {
+    name: '删掉徽标那圈边框',
+    file: 'public/css/app.css',
+    // 这条声明在文件里有 3 处（.brand-mark / .main ×2），
+    // .brand-mark 是最靠前的一处，replace 只替换首次命中，正好落在它身上。
+    apply: (css) => css.replace('  border: var(--bw) solid var(--border-strong);\n', ''),
+    expect: '边框',
+  },
+  {
+    name: '把徽标边框换成 --pane-edge（浅色下是白线，等于没画）',
+    file: 'public/css/app.css',
+    apply: (css) =>
+      css.replace(
+        '  border: var(--bw) solid var(--border-strong);',
+        '  border: var(--bw) solid var(--pane-edge);',
+      ),
+    expect: '边框',
+  },
+  {
+    name: '让徽标图片照抄印章圆角（两个角不同心）',
+    file: 'public/css/app.css',
+    apply: (css) =>
+      css.replace(
+        '  border-radius: calc(var(--brand-radius) - var(--bw));',
+        '  border-radius: var(--brand-radius);',
+      ),
+    expect: '同源',
+  },
+  {
+    name: '把浅色下的 --border-strong 调成透明（边框在浅色下消失）',
+    file: 'public/css/app.css',
+    apply: (css) =>
+      css.replace('--border-strong: rgba(18, 22, 32, 0.20);', '--border-strong: transparent;'),
+    expect: '边框',
+  },
 ];
 
 function runTest() {
@@ -200,7 +248,7 @@ try {
   for (const [f, content] of backups) fs.writeFileSync(rel(f), content, 'utf8');
 }
 
-console.log('\n=== 反向验证（S17 液态玻璃 + S18 外观风格）===');
+console.log('\n=== 反向验证（S14 徽标 + S17 液态玻璃 + S18 外观风格）===');
 for (const r of results) console.log(`${r.ok ? '✔' : '✖'} ${r.name}\n    ${r.verdict}`);
 
 const stale = [...backups].filter(([f, content]) => fs.readFileSync(rel(f), 'utf8') !== content).map(([f]) => f);

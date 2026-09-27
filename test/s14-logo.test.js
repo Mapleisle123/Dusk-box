@@ -11,7 +11,13 @@
  *   2. **图缺失时必须能退回原来那套 CSS 印章。**
  *      换名字、删掉、放成损坏文件都是很可能的操作。
  *      原来的印章样式是兜底，不能被删掉；加载失败也要真的移除 <img>，
- *      否则浏览器会在 32px 的方框里画一个破图图标。
+ *      否则浏览器会在那个方框里画一个破图图标。
+ *
+ *   3. **尺寸、圆角、边框只有一份定义。**
+ *      这三样各有 2~3 处引用（印章本体、三道横线、上面那张图），
+ *      各写各的 px 一旦不同步，切换 logo 与兜底印章时就会跳变。
+ *      所以尺寸/圆角抽成了 --brand-size / --brand-radius，
+ *      边框走 --bw + --border-strong（后者决定它在 24 种外观组合下都看得见）。
  */
 
 import test from 'node:test';
@@ -218,12 +224,29 @@ function readRule(selector) {
   return m[1];
 }
 
-test('S14 · logo 铺满原来的 32px 印章位，圆角与印章一致', () => {
+/** 取出 :root 里的令牌（尺寸/圆角这类"只该有一个事实来源"的值都放这儿） */
+function readRootBlock() {
+  const m = /(?:^|\n):root\s*\{([\s\S]*?)\n\}/.exec(CSS);
+  assert.ok(m, 'app.css 应有 :root 块');
+  return m[1];
+}
+
+/** 从某个样式块里读一个自定义属性 */
+function tokenIn(block, name) {
+  const m = new RegExp(`${name}\\s*:\\s*([^;]+);`).exec(block);
+  assert.ok(m, `样式块里应有 ${name}`);
+  return m[1].trim();
+}
+
+test('S14 · logo 铺满印章方框，尺寸与圆角都与印章同源', () => {
   const brandMark = readRule('.brand-mark');
   const logo = readRule('.brand-logo');
 
-  const size = /width:\s*32px;\s*height:\s*32px/.exec(brandMark);
-  assert.ok(size, '印章仍是 32px 见方——logo 的尺寸跟着它，不该另起一套尺寸');
+  assert.ok(
+    /width:\s*var\(--brand-size\)/.test(brandMark) &&
+      /height:\s*var\(--brand-size\)/.test(brandMark),
+    '印章的宽高应取自 --brand-size——尺寸只留一个事实来源，不要在这条规则里另写一套 px',
+  );
 
   assert.ok(/width:\s*100%/.test(logo) && /height:\s*100%/.test(logo), 'logo 应铺满这个方框');
   assert.ok(
@@ -231,11 +254,70 @@ test('S14 · logo 铺满原来的 32px 印章位，圆角与印章一致', () =>
     'logo 要用 cover 填满方框，否则会按原始比例留下空白',
   );
 
-  const radius = /border-radius:\s*9px/.exec(brandMark);
-  assert.ok(radius, '印章的圆角是 9px');
   assert.ok(
-    /border-radius:\s*9px/.test(logo),
-    'logo 的圆角应与印章一致（9px），否则两者切换时会有肉眼可见的跳变',
+    /border-radius:\s*var\(--brand-radius\)/.test(brandMark),
+    '印章的圆角应取自 --brand-radius',
+  );
+  assert.ok(
+    /border-radius:\s*var\(--brand-radius\)/.test(readRule('.brand-mark::after')),
+    '三道横线也画在同一块方框里，圆角应与印章同源',
+  );
+
+  // 同心圆角：加了边框后，内层实际可用的是 padding box，
+  // 它的圆角天然比 border-radius 小一个边框宽。
+  assert.ok(
+    /border-radius:\s*calc\(\s*var\(--brand-radius\)\s*-\s*var\(--bw\)\s*\)/.test(logo),
+    'logo 的圆角要写成「印章圆角 − 边框宽度」。照抄印章圆角会让两个角**不同心**，' +
+      '四个角各露出一小瓣背景色（11px 的角套在 10px 的角里）',
+  );
+});
+
+test('S14 · 徽标已加大（原来 32px，用户反馈偏小）', () => {
+  const raw = tokenIn(readRootBlock(), '--brand-size');
+  const size = Number(raw.replace('px', ''));
+
+  assert.ok(Number.isFinite(size), `--brand-size 应是 px 数值，实际是 ${raw}`);
+  assert.ok(
+    size >= 40,
+    `徽标当前 ${size}px。原来是 32px、用户反馈偏小，加大后不该再掉回 40px 以下`,
+  );
+});
+
+test('S14 · 徽标有一圈边框，且在浅色/深色/粗野主义下都看得见', () => {
+  const brandMark = readRule('.brand-mark');
+
+  assert.ok(
+    /border:\s*var\(--bw\)\s+solid\s+var\(--border-strong\)/.test(brandMark),
+    '徽标应有一圈边框，写成 `border: var(--bw) solid var(--border-strong)`：' +
+      '一条声明就能在主题 × 深浅 × 风格共 24 种组合下都成立',
+  );
+
+  assert.ok(
+    !/border:[^;]*pane-edge/.test(brandMark),
+    '别拿 --pane-edge 当边框：它是"玻璃面板边缘的高光白线"，浅色下是 rgba(255,255,255,.66)，' +
+      '压在近白的玻璃上等于没画——用户要的是看得见的边框',
+  );
+
+  // 三种作用域都必须给 --border-strong 一个非透明的值，否则某些组合下边框会静默消失
+  const scopes = {
+    '浅色（:root）': readRootBlock(),
+    深色: readRule('html[data-mode="dark"]'),
+    粗野主义: readRule('html[data-style="brutal"]'),
+  };
+  for (const [label, block] of Object.entries(scopes)) {
+    const value = tokenIn(block, '--border-strong');
+    assert.ok(
+      !/^(transparent|none)$/i.test(value),
+      `${label} 下 --border-strong 是 ${value}，边框会消失`,
+    );
+  }
+
+  // 边框宽度跟着 --bw 走，粗野主义才有那圈 2px 粗边
+  assert.equal(tokenIn(readRootBlock(), '--bw'), '1px', '简约的边框宽度是 1px');
+  assert.equal(
+    tokenIn(readRule('html[data-style="brutal"]'), '--bw'),
+    '2px',
+    '粗野主义的边框宽度是 2px',
   );
 });
 
@@ -315,7 +397,7 @@ test('S14 · 加载失败时退回印章，而不是空框或破图', () => {
   assert.ok(/addEventListener\(\s*'error'/.test(body), '应监听 error');
   assert.ok(
     /logo\.remove\(\)/.test(body),
-    '失败时应把 <img> 移除，否则会在 32px 方框里留下一个破图图标',
+    '失败时应把 <img> 移除，否则会在方框里留下一个破图图标',
   );
   assert.ok(
     /classList\.remove\('has-logo'\)/.test(body),
