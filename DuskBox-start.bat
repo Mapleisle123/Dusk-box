@@ -1,6 +1,6 @@
 @echo off
 chcp 936 >nul
-title 茜色箱
+title Dusk Box
 cd /d "%~dp0"
 
 set "NODE_EXE="
@@ -10,7 +10,7 @@ if not defined NODE_EXE if exist "%ProgramFiles%\nodejs\node.exe" set "NODE_EXE=
 
 if not defined NODE_EXE (
   echo.
-  echo   [错误] 没有找到 Node.js，无法启动茜色箱。
+  echo   [错误] 没有找到 Node.js，无法启动 Dusk Box。
   echo.
   echo   请先安装 Node.js：https://nodejs.org/
   echo   安装完成后重新双击本文件即可。
@@ -20,7 +20,7 @@ if not defined NODE_EXE (
 )
 
 echo.
-echo   正在启动 茜色箱 ...
+echo   正在启动 Dusk Box（茜色箱）...
 echo   浏览器会自动打开；若没有，请手动访问窗口里显示的地址。
 echo   关闭本窗口即停止服务（你的数据不会丢失）。
 echo.
@@ -32,5 +32,6 @@ chcp 65001 >nul
 chcp 936 >nul
 
 echo.
-echo   茜色箱已停止。数据保存在本目录的 data 文件夹中。
+echo   Dusk Box 已停止。数据保存在本目录的 data 文件夹中。
+echo   数据库文件：data\duskbox.db
 pause
