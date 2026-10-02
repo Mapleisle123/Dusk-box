@@ -88,9 +88,14 @@ export function createApp({ dataRoot, staticDir = path.join(PROJECT_ROOT, 'publi
   };
 
   // 健康检查：前端用来显示"服务运行中"
+  //
+  // 返回里带上 pid 有两个用处：无窗口启动器靠 app 字段确认"这是我们的服务"
+  // （端口可能被别的程序占用），测试则靠 pid 精确地关掉自己拉起来的那个进程
+  // ——Windows 上按进程名或进程树乱杀会误伤用户正在用的实例。
   router.get('/api/health', () => ({
     ok: true,
     app: APP_NAME,
+    pid: process.pid,
     dataRoot,
     dbPath,
     time: new Date().toISOString(),

@@ -2,7 +2,8 @@
  * 开机自动启动。
  *
  * 机制与项目根目录的两个 .bat 完全一致：
- *   在 Windows「启动」文件夹里放一个指向「DuskBox-start.bat」的快捷方式。
+ *   在 Windows「启动」文件夹里放一个指向启动脚本的快捷方式。
+ *   快捷方式指向的是**无窗口**启动器（DuskBox-launch.vbs），开机时不弹黑窗口。
  *   （DuskBox-autostart-on.bat 建它，DuskBox-autostart-off.bat 删它。）
  *
  * 关键设计：**唯一事实来源是快捷方式文件本身**，不是数据库里的开关值。
@@ -13,22 +14,30 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { execFile } from 'node:child_process';
 import { PROJECT_ROOT } from './config.js';
+import { LAUNCH_SCRIPT, SHORTCUT_NAME, START_SCRIPT } from './constants.js';
+import {
+  createShortcut,
+  readShortcutTarget,
+  removeShortcut,
+  shortcutExists,
+  shortcutsSupported,
+} from './shortcuts.js';
 
 /** 快捷方式文件名（与「安装开机自启.bat」中保持一致） */
-export const SHORTCUT_NAME = 'DuskBox.lnk';
+export { SHORTCUT_NAME };
 
-/** 快捷方式指向的启动脚本 */
-export const LAUNCHER_NAME = 'DuskBox-start.bat';
+/** 有窗口的启动脚本：调试与兜底用（没找到 Node 时的中文提示在里面） */
+export const LAUNCHER_NAME = START_SCRIPT;
+
+/** 无窗口启动器：桌面快捷方式与开机自启都指向它 */
+export const SILENT_LAUNCHER_NAME = LAUNCH_SCRIPT;
 
 /** 快捷方式说明文字 */
 const SHORTCUT_DESC = 'Dusk Box · 开机自动启动本地服务';
 
 /** 是否支持（快捷方式机制为 Windows 特有） */
-export function autostartSupported() {
-  return process.platform === 'win32';
-}
+export const autostartSupported = shortcutsSupported;
 
 /**
  * 启动文件夹位置。
@@ -48,9 +57,15 @@ export function shortcutPath() {
   return path.join(startupDir(), SHORTCUT_NAME);
 }
 
-/** 启动脚本完整路径 */
+/**
+ * 快捷方式指向的启动脚本完整路径。
+ *
+ * 注意这里指的是**无窗口**启动器（DuskBox-launch.vbs），不是那个 .bat：
+ * 开机自启的目标是"开机后悄悄把服务跑起来"，不该弹出一个黑窗口。
+ * 有窗口的 .bat 仍然保留，供手动排查问题用。
+ */
 export function launcherPath() {
-  return path.join(PROJECT_ROOT, LAUNCHER_NAME);
+  return path.join(PROJECT_ROOT, SILENT_LAUNCHER_NAME);
 }
 
 /**
@@ -61,53 +76,12 @@ export function launcherPath() {
  */
 export function getAutostart() {
   const linkPath = shortcutPath();
-  let enabled = false;
-  try {
-    enabled = fs.statSync(linkPath).isFile();
-  } catch {
-    enabled = false;
-  }
   return {
-    enabled,
+    enabled: shortcutExists(linkPath),
     supported: autostartSupported(),
     linkPath,
     launcherPath: launcherPath(),
   };
-}
-
-/**
- * 创建快捷方式的 PowerShell 脚本。
- *
- * 所有路径都通过环境变量传入，脚本本身保持纯 ASCII：
- * 这样项目路径里的空格（"my app"）与中文名都不会遇到引号转义问题。
- */
-const CREATE_SCRIPT = [
-  '$ws = New-Object -ComObject WScript.Shell',
-  '$sc = $ws.CreateShortcut($env:QSX_LNK)',
-  '$sc.TargetPath = $env:QSX_TARGET',
-  '$sc.WorkingDirectory = $env:QSX_WORKDIR',
-  '$sc.WindowStyle = 7',
-  '$sc.Description = $env:QSX_DESC',
-  '$sc.Save()',
-].join('; ');
-
-/** 执行一段 PowerShell，环境变量用于传参 */
-function runPowerShell(script, env) {
-  return new Promise((resolve, reject) => {
-    execFile(
-      'powershell',
-      ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-NonInteractive', '-Command', script],
-      { env: { ...process.env, ...env }, windowsHide: true },
-      (err, stdout, stderr) => {
-        if (err) {
-          const detail = String(stderr || '').trim() || err.message;
-          reject(new Error(`创建开机自启快捷方式失败：${detail}`));
-          return;
-        }
-        resolve(String(stdout || ''));
-      },
-    );
-  });
 }
 
 /**
@@ -121,7 +95,7 @@ export async function setAutostart(enabled) {
 
   if (!enabled) {
     // 关闭：直接删掉快捷方式即可，不需要 PowerShell
-    fs.rmSync(linkPath, { force: true });
+    removeShortcut(linkPath);
     return getAutostart();
   }
 
@@ -135,12 +109,44 @@ export async function setAutostart(enabled) {
   }
 
   fs.mkdirSync(startupDir(), { recursive: true });
-  await runPowerShell(CREATE_SCRIPT, {
-    QSX_LNK: linkPath,
-    QSX_TARGET: launcher,
-    QSX_WORKDIR: PROJECT_ROOT,
-    QSX_DESC: SHORTCUT_DESC,
-  });
+  try {
+    await createShortcut({
+      linkPath,
+      target: launcher,
+      workdir: PROJECT_ROOT,
+      description: SHORTCUT_DESC,
+    });
+  } catch (err) {
+    throw new Error(`创建开机自启快捷方式失败：${err.message}`);
+  }
 
   return getAutostart();
+}
+
+/**
+ * 让现有的快捷方式指向当前的启动脚本。
+ *
+ * 为什么需要它：快捷方式是**外部世界**对文件的引用，不会跟着文件改名或换目标走。
+ * 开机自启原先指向 DuskBox-start.bat（会弹黑窗口），改成无窗口启动器之后，
+ * 老快捷方式会一直静静地指着旧脚本——每次开机照样弹出黑窗口，
+ * 而设置页显示的是"已开启"，从界面上看不出任何异常。
+ *
+ * 只在"已经开着自启 + 目标对不上"时才动手重建；没开自启的用户一切照旧。
+ */
+export async function refreshAutostartTarget() {
+  const state = getAutostart();
+  if (!state.enabled || !autostartSupported()) return state;
+
+  const current = await readShortcutTarget(state.linkPath);
+  if (current && samePath(current, state.launcherPath)) return state;
+
+  // 读不出目标（老格式、文件损坏、或读取被安全策略拦下）时也重建一次：
+  // 代价是一条快捷方式，换来的是"绝不会再指向旧脚本"。
+  return setAutostart(true);
+}
+
+/** 比较两个路径是否相同（Windows 上大小写与斜杠方向都不敏感） */
+function samePath(a, b) {
+  const norm = (p) => path.resolve(String(p)).replace(/[\\/]+/g, '\\').toLowerCase();
+  return norm(a) === norm(b);
 }

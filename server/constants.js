@@ -24,3 +24,24 @@ export const LEGACY_DB_FILENAME = '茜色箱.db';
  * 界面上仍然显示中文「茜色箱」——那是给用户看的，这里是给机器看的。
  */
 export const APP_NAME = 'Dusk Box';
+
+/**
+ * 启动相关脚本的文件名。
+ *
+ * 两个启动脚本分工不同，缺一不可：
+ *   - START_SCRIPT 有窗口：双击能看到启动日志，关掉窗口就等于停止服务。
+ *     它同时是"没找到 Node 时"的兜底——里面的中文提示会告诉用户去装 Node。
+ *   - LAUNCH_SCRIPT 无窗口：桌面快捷方式与开机自启都指向它，
+ *     双击后由 server/launch.js 在后台把服务拉起来，再打开浏览器。
+ */
+export const START_SCRIPT = 'DuskBox-start.bat';
+export const LAUNCH_SCRIPT = 'DuskBox-launch.vbs';
+
+/** 快捷方式文件名（开机自启与桌面用同一个名字，靠所在目录区分） */
+export const SHORTCUT_NAME = 'DuskBox.lnk';
+
+/** 安装 / 移除快捷方式的辅助脚本（可以手动双击，与设置页开关等效） */
+export const AUTOSTART_ON_SCRIPT = 'DuskBox-autostart-on.bat';
+export const AUTOSTART_OFF_SCRIPT = 'DuskBox-autostart-off.bat';
+export const DESKTOP_ON_SCRIPT = 'DuskBox-desktop-on.bat';
+export const DESKTOP_OFF_SCRIPT = 'DuskBox-desktop-off.bat';

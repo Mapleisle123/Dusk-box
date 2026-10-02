@@ -9,10 +9,11 @@
 
 import http from 'node:http';
 import net from 'node:net';
-import { exec } from 'node:child_process';
 import { createApp } from './app.js';
 import { loadConfig, PROJECT_ROOT } from './config.js';
 import { startScheduler } from './backup.js';
+import { openBrowser } from './browser.js';
+import { refreshAutostartTarget } from './autostart.js';
 
 /** 检查端口是否可用 */
 function isPortFree(port, host = '127.0.0.1') {
@@ -23,18 +24,6 @@ function isPortFree(port, host = '127.0.0.1') {
       tester.close(() => resolve(true));
     });
     tester.listen(port, host);
-  });
-}
-
-/** 自动打开浏览器 */
-function openBrowser(url) {
-  const platform = process.platform;
-  let cmd;
-  if (platform === 'win32') cmd = `start "" "${url}"`;
-  else if (platform === 'darwin') cmd = `open "${url}"`;
-  else cmd = `xdg-open "${url}"`;
-  exec(cmd, () => {
-    /* 打不开浏览器不影响服务运行，用户可手动访问 */
   });
 }
 
@@ -72,6 +61,13 @@ async function main() {
     console.log('');
     startScheduler(app);
     if (process.env.QSX_NO_OPEN !== '1') openBrowser(url);
+
+    // 开机自启的快捷方式指向的是启动脚本。脚本换文件（比如从 .bat 换成无窗口启动器）时，
+    // 老快捷方式不会自己跟着变，得在这里顺手校正一次，否则用户每次开机都还是旧行为。
+    // 放在监听之后异步做：它是"维护动作"，不该拖慢服务可用时间。
+    refreshAutostartTarget().catch((err) => {
+      console.error('[Dusk Box] 校正开机自启快捷方式失败（不影响使用）：', err.message);
+    });
   });
 
   const shutdown = () => {

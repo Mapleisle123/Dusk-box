@@ -17,8 +17,14 @@ import path from 'node:path';
 import net from 'node:net';
 import { spawn } from 'node:child_process';
 import { PROJECT_ROOT } from '../server/config.js';
-import { DB_FILENAME } from '../server/constants.js';
+import {
+  AUTOSTART_OFF_SCRIPT,
+  AUTOSTART_ON_SCRIPT,
+  DB_FILENAME,
+  LAUNCH_SCRIPT,
+} from '../server/constants.js';
 import { LAUNCHER_NAME, SHORTCUT_NAME } from '../server/autostart.js';
+import { healthAt } from '../server/launch.js';
 
 const ENTRY = path.join(PROJECT_ROOT, 'server', 'index.js');
 
@@ -127,8 +133,9 @@ async function cleanup(srv, ...dirs) {
 test('S9 · 启动脚本与配套文件齐备', () => {
   for (const name of [
     LAUNCHER_NAME,
-    'DuskBox-autostart-on.bat',
-    'DuskBox-autostart-off.bat',
+    LAUNCH_SCRIPT,
+    AUTOSTART_ON_SCRIPT,
+    AUTOSTART_OFF_SCRIPT,
     'package.json',
   ]) {
     assert.ok(fs.existsSync(path.join(PROJECT_ROOT, name)), `应存在 ${name}`);
@@ -146,11 +153,18 @@ test('S9 · 启动脚本与配套文件齐备', () => {
     '启动 Node 之前应切到 65001，否则 Node 的 UTF-8 中文输出在本地代码页下会乱码',
   );
 
-  const autoStart = readBat('DuskBox-autostart-on.bat');
+  const autoStart = readBat(AUTOSTART_ON_SCRIPT);
   assert.ok(autoStart.includes('Startup'), '开机自启脚本应写入启动文件夹');
-  assert.ok(autoStart.includes(LAUNCHER_NAME), '自启脚本应指向启动脚本');
+  assert.ok(
+    autoStart.includes(LAUNCH_SCRIPT),
+    `自启脚本应指向无窗口启动器 ${LAUNCH_SCRIPT}；指向带窗口的 .bat 会让每次开机都弹出一个黑窗口`,
+  );
+  assert.ok(
+    !autoStart.includes(`'${LAUNCHER_NAME}'`),
+    '自启脚本不应再指向带窗口的启动脚本',
+  );
 
-  const uninstall = readBat('DuskBox-autostart-off.bat');
+  const uninstall = readBat(AUTOSTART_OFF_SCRIPT);
   assert.ok(uninstall.includes(SHORTCUT_NAME), '取消脚本应删除对应快捷方式');
 });
 
@@ -251,16 +265,34 @@ test(
       return false;
     })();
 
+    // 服务本体的 pid（来自 /api/health），收尾时要精确地关掉它
+    let serverPid = null;
+
     t.after(async () => {
-      // 必须杀整棵进程树：只杀 cmd.exe 会留下孤儿的 node 进程继续占着端口
+      // 收尾必须让**两个**进程都消失，缺一个测试就跑不完：
+      //   - node（服务本体）藏在 cmd 后面，只杀 cmd 会留下孤儿进程继续占着端口；
+      //   - cmd（bat 的执行者）在 node 退出后还要执行末尾的 pause，只杀 node 会让它
+      //     一直挂着，测试进程的管道收不回来，整个测试进程不退出。
+      //
+      // 优先按 pid 精确关（这台机器上 taskkill 被安全策略拦着，而且按进程名乱杀
+      // 会误伤用户正在用的那个实例）。
+      let pid = serverPid;
+      if (!pid) {
+        pid = (await healthAt(port).catch(() => null))?.pid ?? null;
+      }
+      if (pid) {
+        try {
+          process.kill(pid);
+        } catch {
+          /* 已经退出了 */
+        }
+      }
       if (child.exitCode === null) {
+        child.kill();
         await new Promise((resolve) => {
-          const killer = spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], {
-            stdio: 'ignore',
-          });
-          const to = setTimeout(resolve, 5000);
+          const to = setTimeout(resolve, 3000);
           to.unref();
-          killer.once('exit', () => {
+          child.once('exit', () => {
             clearTimeout(to);
             resolve();
           });
@@ -297,8 +329,10 @@ test(
     // 服务确实在跑，且用的是配置里的数据目录
     const res = await fetch(`http://127.0.0.1:${port}/api/health`);
     const body = await res.json();
+    serverPid = body.pid ?? null;
     assert.equal(body.ok, true, '经 bat 启动后服务应能正常响应');
     assert.equal(body.dataRoot, dataRoot, '应使用配置中的数据目录');
+    assert.ok(Number.isInteger(body.pid), '健康检查应报告服务进程 pid（测试据此精确收尾）');
   },
 );
 
