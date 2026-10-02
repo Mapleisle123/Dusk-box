@@ -1786,8 +1786,10 @@ html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }
   background: none;
   cursor: pointer;
   pointer-events: auto;
-  /* 默认半收在屏幕外，鼠标靠近才完全展开 */
-  transform: translateX(56%);
+  /* 默认半收在屏幕外，鼠标靠近才完全展开。
+     50% 是按立绘本身调的：她站在画面正中，收一半正好露出举起来的那只手，
+     再多就只剩一缕头发，认不出是谁了。 */
+  transform: translateX(50%);
   transition: transform .45s var(--ease), filter .3s var(--ease);
 }
 
