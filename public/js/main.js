@@ -10,6 +10,7 @@ import { esc, icons } from './ui.js';
 import { pageHome } from './pages/home.js';
 import { pagePosts } from './pages/posts.js';
 import { pagePlans } from './pages/plans.js';
+import { pageProjects } from './pages/projects.js';
 import { pageAlbums } from './pages/albums.js';
 import { pageSettings } from './pages/settings.js';
 
@@ -17,6 +18,7 @@ const PAGES = {
   home: pageHome,
   posts: pagePosts,
   plans: pagePlans,
+  projects: pageProjects,
   albums: pageAlbums,
   settings: pageSettings,
 };

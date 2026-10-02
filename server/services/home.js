@@ -10,6 +10,7 @@ import { todayISO } from '../dates.js';
 import { todaySummaries, reminder, listStatuses } from './plans.js';
 import { recentPhotos, summary as albumsSummary } from './albums.js';
 import { summary as postsSummary } from './posts.js';
+import { summary as projectsSummary } from './projects.js';
 
 /**
  * 计划模块摘要。
@@ -76,6 +77,8 @@ export function buildHome(ctx, date = todayISO()) {
     todayPending: today.filter((t) => t.needsToday).length,
     reminder: reminder(ctx, date),
     recentPhotos: recentPhotos(ctx, 8),
+    // 首页最下面的「项目」区块：只展示进行中的几条，数据完全来自项目模块
+    projects: projectsSummary(ctx, { limit: 3 }),
     summaries: {
       posts: postsSummary(ctx, date),
       plans: plansSummary(ctx, date),

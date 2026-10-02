@@ -7,6 +7,8 @@
  *     ├── 发布/<年>/<日期> <标题>.md
  *     ├── 发布/<年>/media/<日期>-<序号>.<ext>
  *     ├── 计划/<计划名>.md
+ *     ├── 项目/<项目名>.md
+ *     ├── 项目/media/<项目id>-<序号>.<ext>
  *     ├── 相册/<相册集名>/_album.json
  *     ├── 相册/<相册集名>/<原文件名>
  *     └── 备份/<日期>/
@@ -192,6 +194,42 @@ export function renderAlbumMeta(album, photos = []) {
 }
 
 /**
+ * 生成一个项目文件的 Markdown 内容。
+ *
+ * 「项目」是"一次性的、有始有终的事"，所以这份文件要能一眼看出
+ * 推到哪一步了、拿到了什么结果——进度是百分比，结果是文字加图片。
+ */
+export function renderProjectMarkdown(project, media = []) {
+  const statusLabel = { active: '进行中', paused: '搁置', done: '已完成' }[project.status] || '进行中';
+  const lines = [];
+  lines.push(`# ${project.name}`);
+  lines.push('');
+  lines.push('---');
+  lines.push('');
+  lines.push(`- 状态：${statusLabel}`);
+  lines.push(`- 进度：${project.progress}%`);
+  lines.push(`- 开始日期：${project.start_date}`);
+  lines.push(`- 创建：${project.created_at}`);
+  lines.push(`- 更新：${project.updated_at}`);
+  lines.push('');
+  lines.push('---');
+  lines.push('');
+  lines.push('## 结果');
+  lines.push('');
+  lines.push(project.result || '（还没有写结果）');
+  lines.push('');
+  if (media.length) {
+    lines.push('<!-- 成果图 -->');
+    lines.push('');
+    for (const m of media) {
+      lines.push(`![${m.original_name}](${m.file_path})`);
+      lines.push('');
+    }
+  }
+  return lines.join('\n');
+}
+
+/**
  * 创建存储层。
  * @param {string} dataRoot 数据根目录
  */
@@ -201,6 +239,7 @@ export function createStorage(dataRoot) {
     root: absRoot,
     posts: path.join(absRoot, '发布'),
     plans: path.join(absRoot, '计划'),
+    projects: path.join(absRoot, '项目'),
     albums: path.join(absRoot, '相册'),
     backups: path.join(absRoot, '备份'),
   };
@@ -326,6 +365,46 @@ export function createStorage(dataRoot) {
     return relOf(abs);
   }
 
+  // ---------- 项目 ----------
+
+  /** 项目成果图的目录 */
+  function projectMediaDir() {
+    return path.join(dirs.projects, 'media');
+  }
+
+  /**
+   * 写入项目文件。
+   * 与计划一样：改名字就换文件、不留旧文件；文件名经过净化，保证一定落得下去。
+   */
+  function writeProjectFile(project, media = []) {
+    const base = sanitizeName(project.name, `项目${project.id}`, 60);
+    let abs;
+    if (project.file_path) {
+      const existing = absOf(project.file_path);
+      if (path.basename(existing, '.md') === base) {
+        abs = existing;
+      } else {
+        abs = uniqueAbsPath(dirs.projects, base, '.md');
+        safeUnlink(project.file_path);
+      }
+    } else {
+      abs = uniqueAbsPath(dirs.projects, base, '.md');
+    }
+    atomicWrite(abs, renderProjectMarkdown(project, media));
+    return relOf(abs);
+  }
+
+  /** 保存一张成果图，落在 项目/media/ 下 */
+  function saveProjectMedia({ buffer, originalName, projectId, seq }) {
+    const dir = projectMediaDir();
+    ensureDir(dir);
+    const ext = extOf(originalName) || '.png';
+    const base = `${projectId}-${String(seq).padStart(2, '0')}`;
+    const abs = uniqueAbsPath(dir, base, ext);
+    atomicWrite(abs, buffer);
+    return relOf(abs);
+  }
+
   // ---------- 相册 ----------
 
   /** 为一个相册集生成不冲突的文件夹名 */
@@ -436,6 +515,8 @@ export function createStorage(dataRoot) {
     writePostFile,
     savePostMedia,
     writePlanFile,
+    writeProjectFile,
+    saveProjectMedia,
     createAlbumFolder,
     renameAlbumFolder,
     deleteAlbumFolder,

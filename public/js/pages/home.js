@@ -174,6 +174,24 @@ function buildHtml(home, date) {
     ? `今日 ${home.todayCount} 项计划${pending.length ? `，还有 ${pending.length} 项待完成` : '，已全部完成'}`
     : '今天还没有安排';
 
+  // ---- 项目（首页最下面） ----
+  // 首页只做展示，数据完全来自项目模块：点进去就是在项目页里改，
+  // 避免出现"首页显示 40%、项目页显示 60%"这种两套数据。
+  const projects = home.projects || { items: [], activeCount: 0, total: 0 };
+  const projectRows = (projects.items || [])
+    .map(
+      (p) => `
+      <div class="home-project" data-nav="projects" title="${esc(p.name)}">
+        <span class="home-project-name">${esc(p.name)}</span>
+        <div class="progress-bar"><div class="progress-fill ${p.progress >= 100 ? 'over' : ''}" style="width:${p.progress}%"></div></div>
+        <span class="home-project-pct">${p.progress}%</span>
+      </div>`,
+    )
+    .join('');
+  const projectsBlock = projectRows
+    ? projectRows
+    : '<p class="text-sm muted">还没有在进行中的项目。想记点什么，去「项目」页新建一个。</p>';
+
   return `
   <div class="page">
     <div class="page-head">
@@ -234,6 +252,14 @@ function buildHtml(home, date) {
           actionTarget: 'albums',
         })}
       </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <span class="section-title">项目 ${projects.activeCount ? `<span class="count">进行中 ${projects.activeCount}</span>` : ''}</span>
+        <span class="section-link" data-nav="projects">全部项目</span>
+      </div>
+      <div class="card home-projects">${projectsBlock}</div>
     </div>
   </div>`;
 }

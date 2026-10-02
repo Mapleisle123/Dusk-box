@@ -1697,3 +1697,68 @@ html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }
   }
   .page { animation: none; }
 }
+
+/* ---- 项目页 ---- */
+
+/* 一次性的、有始有终的事：卡片上要能一眼看出"推到哪了"和"拿到了什么" */
+.project-list { display: grid; gap: var(--space-3); }
+.project-card { display: flex; flex-direction: column; gap: 10px; }
+.project-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.project-name { font-family: var(--font-display); font-size: var(--fs-md); color: var(--text); }
+.project-progress { display: flex; align-items: center; gap: 10px; }
+.project-progress .progress-bar { flex: 1; }
+.project-pct {
+  min-width: 44px;
+  text-align: right;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.project-range { width: 100%; accent-color: var(--primary); }
+.project-result { font-size: var(--fs-sm); color: var(--text-2); line-height: 1.7; }
+.project-thumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.project-thumb {
+  width: 54px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: var(--bw) solid var(--border);
+}
+.project-more { font-size: var(--fs-xs); color: var(--text-3); }
+.project-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.project-actions { display: flex; gap: 6px; }
+
+/* 编辑弹窗里的成果图 */
+.editor-media { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.editor-media-item { position: relative; }
+.editor-media-item img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; }
+
+/* 首页最下面的项目区块：一行一条，点整行进项目页 */
+.home-projects { display: flex; flex-direction: column; gap: 10px; }
+.home-project {
+  display: grid;
+  grid-template-columns: minmax(80px, 1fr) 2fr auto;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+.home-project-name {
+  font-size: var(--fs-sm);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color .2s var(--ease);
+}
+.home-project:hover .home-project-name { color: var(--primary); }
+.home-project-pct {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}

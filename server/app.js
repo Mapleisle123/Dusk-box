@@ -19,6 +19,7 @@ import { PROJECT_ROOT, saveConfig } from './config.js';
 import { resolveBackgroundAsset } from './backgrounds.js';
 import { mountPostsRoutes } from './routes/posts.js';
 import { mountPlansRoutes } from './routes/plans.js';
+import { mountProjectsRoutes } from './routes/projects.js';
 import { mountAlbumsRoutes } from './routes/albums.js';
 import { mountHomeRoutes } from './routes/home.js';
 import { mountSettingsRoutes } from './routes/settings.js';
@@ -135,6 +136,7 @@ export function createApp({
   mountDesktopRoutes(router, ctx);
   mountPostsRoutes(router, ctx);
   mountPlansRoutes(router, ctx);
+  mountProjectsRoutes(router, ctx);
   mountAlbumsRoutes(router, ctx);
   mountHomeRoutes(router, ctx);
   mountBackupRoutes(router, ctx);

@@ -93,6 +93,20 @@ export const api = {
   archivePlan: (id, archived) =>
     request('POST', `/api/plans/${id}/archive`, { json: { archived } }),
 
+  // ---- 项目 ----
+  listProjects: (params) => request('GET', `/api/projects${qs(params)}`),
+  projectSummary: (limit) => request('GET', `/api/projects/summary${qs({ limit })}`),
+  getProject: (id) => request('GET', `/api/projects/${id}`),
+  createProject: (formData) => request('POST', '/api/projects', { formData }),
+  // 编辑器传的是 FormData（要带图），改进度/改状态传的是普通对象
+  updateProject: (id, body) =>
+    typeof FormData !== 'undefined' && body instanceof FormData
+      ? request('PUT', `/api/projects/${id}`, { formData: body })
+      : request('PUT', `/api/projects/${id}`, { json: body }),
+  deleteProject: (id) => request('DELETE', `/api/projects/${id}`),
+  deleteProjectMedia: (id, mediaId) =>
+    request('DELETE', `/api/projects/${id}/media/${mediaId}`),
+
   // ---- 相册 ----
   listAlbums: () => request('GET', '/api/albums'),
   getAlbum: (id) => request('GET', `/api/albums/${id}`),

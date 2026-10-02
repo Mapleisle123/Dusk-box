@@ -25,7 +25,7 @@ import { DB_FILENAME, LEGACY_DB_FILENAME, APP_NAME } from './constants.js';
  * 少了它，恢复之后设置里那个文件名会指向一张不存在的图——
  * 页面上表现为"背景突然变空白"，而且用户自己很难联想到是恢复造成的。
  */
-const DATA_DIRS = ['发布', '计划', '相册', USER_BACKGROUND_DIRNAME];
+const DATA_DIRS = ['发布', '计划', '项目', '相册', USER_BACKGROUND_DIRNAME];
 
 /**
  * 在备份目录里找数据库文件，找不到返回 null。

@@ -32,7 +32,7 @@ import { DB_FILENAME } from '../constants.js';
  * 背景图也算用户数据：它是用户自己加进来的图片，不在这个清单里的话，
  * 导出的包拿到别的机器上恢复，设置里那个文件名就指向一张不存在的图。
  */
-const EXPORT_DIRS = ['发布', '计划', '相册', USER_BACKGROUND_DIRNAME];
+const EXPORT_DIRS = ['发布', '计划', '项目', '相册', USER_BACKGROUND_DIRNAME];
 
 /**
  * 允许通过接口修改的设置项。
@@ -251,7 +251,7 @@ export function mountSettingsRoutes(router, ctx) {
     if (migrate) {
       // 先做一次完整备份，避免迁移过程出问题导致数据丢失
       fs.mkdirSync(target, { recursive: true });
-      for (const dirName of ['发布', '计划', '相册']) {
+      for (const dirName of ['发布', '计划', '项目', '相册']) {
         const src = path.join(current, dirName);
         const dest = path.join(target, dirName);
         copyDirSafe(src, dest);

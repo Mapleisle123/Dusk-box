@@ -9,8 +9,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-/** 当前 schema 版本，后续结构变更时递增并追加迁移步骤 */
-export const SCHEMA_VERSION = 1;
+/**
+ * 当前 schema 版本。
+ *
+ * v2 新增了 projects / project_media（「项目」页）。它们由下面的建表语句
+ * 直接建立（CREATE TABLE IF NOT EXISTS 是幂等的），所以老数据库不需要迁移步骤，
+ * 打开时自动补上这两张表。版本号记在这里是为了以后真要改字段时知道从哪一版开始。
+ */
+export const SCHEMA_VERSION = 2;
 
 /** 建表语句（幂等，可重复执行） */
 const SCHEMA_SQL = `
@@ -97,6 +103,30 @@ CREATE TABLE IF NOT EXISTS settings (
   key   TEXT PRIMARY KEY,
   value TEXT
 );
+
+CREATE TABLE IF NOT EXISTS projects (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  name        TEXT    NOT NULL,
+  status      TEXT    NOT NULL DEFAULT 'active',
+  progress    INTEGER NOT NULL DEFAULT 0,
+  start_date  TEXT    NOT NULL,
+  result      TEXT    NOT NULL DEFAULT '',
+  file_path   TEXT,
+  created_at  TEXT    NOT NULL,
+  updated_at  TEXT    NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS project_media (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id    INTEGER NOT NULL,
+  original_name TEXT    NOT NULL,
+  file_path     TEXT    NOT NULL,
+  seq           INTEGER NOT NULL DEFAULT 0,
+  created_at    TEXT    NOT NULL,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_project_media_project ON project_media(project_id, seq);
 `;
 
 /** 设置项的默认值 */
