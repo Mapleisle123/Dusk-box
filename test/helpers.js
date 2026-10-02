@@ -9,6 +9,8 @@ import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
 import zlib from 'node:zlib';
+import net from 'node:net';
+import { spawn } from 'node:child_process';
 import { createApp } from '../server/app.js';
 import { PROJECT_ROOT } from '../server/config.js';
 
@@ -197,4 +199,81 @@ export function ok(res, message = '') {
     throw new Error(`${message} 期望 2xx，实际 ${res.status}：${JSON.stringify(res.body)}`);
   }
   return res.body;
+}
+
+// ---------------------------------------------------------------------------
+// 端口占位
+// ---------------------------------------------------------------------------
+
+/** 找一个空闲端口 */
+export function freePort() {
+  return new Promise((resolve, reject) => {
+    const srv = net.createServer();
+    srv.once('error', reject);
+    srv.listen(0, '127.0.0.1', () => {
+      const { port } = srv.address();
+      srv.close(() => resolve(port));
+    });
+  });
+}
+
+/**
+ * 把一段连续端口占住（连上就断开），可以留出一格。
+ *
+ * 两个用处：
+ *   1. 让"服务已经在跑"这类探针用例不受并行跑着的隔壁实例干扰——
+ *      茜色箱的实例长得都一样，探针扫到谁都会当成"在跑"；
+ *   2. 服务不在时报 0 的用例，扫描范围内必须真的一个实例都没有。
+ *
+ * 为什么监听的是**另一个进程**：本进程自己监听的端口，被别的进程访问时
+ * 数据过不来（这台机器的执行环境会拦），探针只能一直等到读超时——
+ * 20 个端口乘下来就是半分钟。独立进程监听"连上就断开"，立刻返回 EOF。
+ *
+ * @param {number} size 段长
+ * @param {number} freeIndex 留空的那一格（-1 表示全占住）
+ * @returns {Promise<{base:number, child:import('node:child_process').ChildProcess}|null>}
+ */
+export async function occupyPortRange(size, freeIndex = -1) {
+  const script = `
+    const net = require('net');
+    const [base, size, free] = process.argv.slice(1).map(Number);
+    let listening = 0;
+    const want = size - (free >= 0 ? 1 : 0);
+    for (let i = 0; i < size; i += 1) {
+      if (i === free) continue;
+      net.createServer((socket) => socket.destroy())
+        .listen(base + i, '127.0.0.1', () => {
+          listening += 1;
+          if (listening === want) console.log('ready');
+        });
+    }
+  `;
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const base = await freePort();
+    if (base + size - 1 > 65535) continue;
+    const child = spawn(
+      process.execPath,
+      ['-e', script, String(base), String(size), String(freeIndex)],
+      { stdio: ['ignore', 'pipe', 'ignore'] },
+    );
+    const ready = await new Promise((resolve) => {
+      let out = '';
+      const timer = setTimeout(() => resolve(false), 5000);
+      child.stdout.on('data', (d) => {
+        out += String(d);
+        if (out.includes('ready')) {
+          clearTimeout(timer);
+          resolve(true);
+        }
+      });
+      child.once('exit', () => {
+        clearTimeout(timer);
+        resolve(false);
+      });
+    });
+    if (ready) return { base, child };
+    child.kill();
+  }
+  return null;
 }

@@ -77,6 +77,7 @@ function Invoke-DuskBoxHttp {
 
     $buffer = New-Object byte[] 8192
     $memory = New-Object System.IO.MemoryStream
+    $got = $false
     while ($true) {
       try {
         $read = $stream.Read($buffer, 0, $buffer.Length)
@@ -86,6 +87,11 @@ function Invoke-DuskBoxHttp {
       if ($read -le 0) { break }
       $memory.Write($buffer, 0, $read)
       if ($memory.Length -gt 65536) { break }
+      # 已经拿到响应了。接下来这一轮只是在等连接关闭（服务端不一定马上关），
+      # 不该还按 1.5 秒等——否则每探一个端口就空等一秒半，
+      # 服务没在跑时要扫 20 个端口，图标得半分钟才变灰。
+      if (-not $got) { $got = $true }
+      $stream.ReadTimeout = 250
     }
     return [Text.Encoding]::UTF8.GetString($memory.ToArray())
   } catch {
