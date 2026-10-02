@@ -340,12 +340,18 @@ test('S4 · 起始日在未来时，计划显示为"未开始"', async (t) => {
   const srv = await startTestServer();
   t.after(() => srv.close());
 
+  // 日期要相对"今天"算，不能写死一个未来日期：
+  // 写死的话，那天一过这条用例就会永远失败（2026-10-01 就是这么过期的）。
+  // 相对日期既一直测得到"还没开始"，也不会过期。
+  const startISO = toISODate(addDays(new Date(), 30));
+  const laterISO = toISODate(addDays(new Date(), 31));
+
   const plan = ok(
     await srv.post('/api/plans', {
       name: '下月开始的计划',
       mode: 'check',
       cycleUnit: 'month',
-      startDate: '2026-10-01',
+      startDate: startISO,
       startMode: 'same_day',
     }),
   );
@@ -354,7 +360,7 @@ test('S4 · 起始日在未来时，计划显示为"未开始"', async (t) => {
   assert.equal(plan.needsToday, false);
 
   // 到期后正常开始
-  const later = ok(await srv.get(`/api/plans/${plan.plan.id}?date=2026-10-02`));
+  const later = ok(await srv.get(`/api/plans/${plan.plan.id}?date=${laterISO}`));
   assert.equal(later.started, true);
 });
 
