@@ -162,8 +162,9 @@ function appearanceBlock(settings, backgrounds) {
         <div>
           <div class="s-label">吉祥物「祀」</div>
           <div class="s-desc">
-            页面右侧那个会动的 Q 版小人：鼠标靠近会展开，点一下会说句话。<br>
-            形象图放在项目里的 <span class="mono">img/mascot/mascot.png</span>，换一张图就换形象。
+            左侧导航下面那个小人：每次切页挥一次手，连点三次会跺脚，按住可以拖着玩，<br>
+            静置一会儿她会自己待机；鼠标移到她身上会说话。<br>
+            形象与动作素材在项目里的 <span class="mono">img/mascot/</span>，换文件就换样子。
           </div>
         </div>
         <div class="s-control">

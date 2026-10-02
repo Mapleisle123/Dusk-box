@@ -6,7 +6,7 @@ import { api } from './api.js';
 import { store } from './store.js';
 import { currentRoute, onRouteChange, startRouter, navigate } from './router.js';
 import { esc, icons } from './ui.js';
-import { mountMascot } from './mascot.js';
+import { mascotOnRouteChange, mountMascot } from './mascot.js';
 
 import { pageHome } from './pages/home.js';
 import { pagePosts } from './pages/posts.js';
@@ -149,6 +149,8 @@ async function bootstrap() {
   }
 
   onRouteChange(render);
+  // 每次切换页面：先让吉祥物挥一次手（她第一次露面也挥，见 mountMascot）
+  onRouteChange(() => mascotOnRouteChange());
   startRouter();
 
   pollService();

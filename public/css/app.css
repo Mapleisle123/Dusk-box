@@ -1763,73 +1763,111 @@ html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }
   font-variant-numeric: tabular-nums;
 }
 
-/* ---- 吉祥物「祀」 ---- */
+/* ---- 吉祥物「祀」（住在侧栏下方那块空白里） ---- */
 /*
-  两条硬约束，改这里之前先读一遍：
-   1. 它必须落在**视口下半部**（bottom 而不是 top），因为各页面右上角本来就有按钮
-      （发布页的「写一篇」就在那儿），钉在上半部一定会挡住能点的东西；
-   2. 容器本身 pointer-events: none，只有角色本体接鼠标——这样即使它压在什么上面，
-     底下的东西照样点得到。
+  几条改之前要先读的约束：
+   1. 她占的是侧栏自己的格子（导航与服务状态之间），所以**不再有"挡住页面按钮"的问题**；
+   2. 她必须能在窗口变矮时自己缩：容器 min-height:0 + 图片 max-height:100%，
+      否则侧栏是 flex 布局，她会被挤扁或者把服务状态顶出屏幕；
+   3. 拖动时她会临时变成 position:fixed 飞出去，松手再回到这个格子里
+      （回到格子这件事是靠"删掉那个 class"完成的，不需要记住坐标）。
 */
+.sidebar-mascot {
+  /* 吃掉导航与底部状态之间的剩余高度，但绝不允许自己撑破侧栏 */
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: var(--space-3) 0;
+}
+
+/* 窗口太矮就没有她的地方了：宁可藏起来，也不要把侧栏挤变形 */
+@media (max-height: 620px) {
+  .sidebar-mascot { display: none; }
+}
+
 .mascot {
-  position: fixed;
-  right: 0;
-  bottom: 7vh;
-  z-index: 40;
-  pointer-events: none;
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
 }
 
 .mascot-body {
-  display: block;
+  /* 固定一个"窗"的比例（跟着静止立绘），这样在静态图与视频之间切换时窗子不会跳 */
+  width: 100%;
+  max-width: 196px;
+  aspect-ratio: 520 / 944;
+  max-height: 100%;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
   padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  pointer-events: auto;
-  /* 默认半收在屏幕外，鼠标靠近才完全展开。
-     50% 是按立绘本身调的：她站在画面正中，收一半正好露出举起来的那只手，
-     再多就只剩一缕头发，认不出是谁了。 */
-  transform: translateX(50%);
-  transition: transform .45s var(--ease), filter .3s var(--ease);
+  overflow: hidden;
+  /* 素材是白底的：窗底就跟着白，静止那张透明 PNG 也落在同一个窗里 */
+  background: #fff;
+  border: var(--bw) solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  cursor: grab;
+  touch-action: none; /* 拖动时不要被浏览器的滚动手势抢走 */
+  transition: transform .38s var(--ease), filter .3s var(--ease);
 }
 
 .mascot-body:hover,
 .mascot-body:focus-visible {
-  transform: translateX(4%) translateY(-6px);
-  filter: drop-shadow(0 10px 22px color-mix(in srgb, var(--primary) 34%, transparent));
+  filter: drop-shadow(0 10px 22px color-mix(in srgb, var(--primary) 30%, transparent));
+}
+
+/* 被拖着走的时候：脱离侧栏、浮在最上面、跟着鼠标 */
+.mascot-body.is-dragging {
+  position: fixed;
+  z-index: 90;
+  cursor: grabbing;
+  pointer-events: none; /* 别把 pointermove 抢回去 */
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, .28));
 }
 
 .mascot-img {
   display: block;
-  width: 168px;
-  height: auto;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
   user-select: none;
   -webkit-user-drag: none;
-  /* 呼吸浮动放在图这一层：按钮那层的 transform 要留给"收/展" */
-  animation: mascot-breathe 4.6s ease-in-out infinite;
+}
+
+.mascot-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  pointer-events: none;
 }
 
 .mascot-bubble {
   position: absolute;
-  right: 150px;
-  bottom: 60%;
-  max-width: 220px;
+  left: 50%;
+  bottom: 100%;
+  transform: translate(-50%, 6px);
+  width: max-content;
+  max-width: 186px;
   padding: 8px 12px;
   border-radius: 12px;
   border: var(--bw) solid var(--border);
   background: var(--surface);
   color: var(--text);
   box-shadow: var(--shadow-sm);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   line-height: 1.6;
+  text-align: center;
   opacity: 0;
-  transform: translateY(6px);
   transition: opacity .25s var(--ease), transform .25s var(--ease);
+  pointer-events: none;
 }
 
-.mascot-bubble.show { opacity: 1; transform: translateY(0); }
-
-@keyframes mascot-breathe {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-7px) scale(1.015); }
-}
+.mascot-bubble.show { opacity: 1; transform: translate(-50%, 0); }
