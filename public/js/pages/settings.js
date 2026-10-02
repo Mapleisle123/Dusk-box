@@ -321,6 +321,18 @@ function aboutBlock(autostart, desktop) {
           </div>
         </div>
       </div>
+      <div class="settings-row">
+        <div>
+          <div class="s-label">停止服务</div>
+          <div class="s-desc">
+            停掉后台的本地服务。数据不会丢，下次双击桌面图标即可重新打开。<br>
+            服务卡住、要改数据目录、或要更新代码时用它。
+          </div>
+        </div>
+        <div class="s-control">
+          <button class="btn btn-danger" data-stop-service type="button">停止服务</button>
+        </div>
+      </div>
     </div>`;
 }
 
@@ -565,6 +577,34 @@ export async function pageSettings() {
       root.querySelector('[data-export]')?.addEventListener('click', () => {
         window.location.href = '/api/export';
         toastSuccess('正在打包，稍等片刻…');
+      });
+
+      // 停止服务：先二次确认，再发请求
+      root.querySelector('[data-stop-service]')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        const yes = await confirmDialog({
+          title: '停止茜色箱？',
+          message: '服务会停止，这个页面将无法再操作。数据不会丢失，双击桌面图标可以重新打开。',
+          confirmText: '停止',
+          danger: true,
+        });
+        if (!yes) return;
+
+        btn.disabled = true;
+        try {
+          await api.shutdown();
+          toastSuccess('服务已停止，可以关掉这个页面了');
+          // 侧栏状态灯本来每 15 秒才轮询一次，这里立刻切过去，
+          // 不然用户会以为"点了没反应"
+          const dot = document.getElementById('service-dot');
+          dot?.classList.remove('online');
+          dot?.classList.add('offline');
+          const text = document.getElementById('service-text');
+          if (text) text.textContent = '服务已停止';
+        } catch (err) {
+          btn.disabled = false;
+          toastError(err.message);
+        }
       });
 
       // 桌面启动器：与开机自启同一套路，状态以服务端回报的"快捷方式在不在"为准

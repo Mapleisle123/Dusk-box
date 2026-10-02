@@ -30,7 +30,10 @@ function isPortFree(port, host = '127.0.0.1') {
 
 async function main() {
   const config = loadConfig();
-  const app = createApp({ dataRoot: config.dataRoot });
+  // 停止服务由设置页或托盘触发（无窗口启动后没有"关掉黑窗口"这个动作了）。
+  // 这里传的是个箭头函数：它要等到真的有人点停止时才执行，
+  // 那时下面的 shutdown 已经定义好了。
+  const app = createApp({ dataRoot: config.dataRoot, onShutdown: () => shutdown() });
 
   let port = config.port;
   const free = await isPortFree(port);

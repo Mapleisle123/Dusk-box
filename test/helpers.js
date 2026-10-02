@@ -95,11 +95,15 @@ export function makePng(width = 8, height = 8, rgb = [183, 40, 46]) {
 
 /**
  * 启动一个隔离的测试服务器。
+ *
+ * @param {object} [options]
+ * @param {string} [options.dataRoot] 指定数据目录（缺省用临时目录）
+ * @param {() => void} [options.onShutdown] 让实例支持「停止服务」接口
  */
-export async function startTestServer({ dataRoot } = {}) {
+export async function startTestServer({ dataRoot, onShutdown } = {}) {
   const root = dataRoot || fs.mkdtempSync(path.join(os.tmpdir(), 'qsx-test-'));
   const owned = !dataRoot;
-  const app = createApp({ dataRoot: root, staticDir: PUBLIC_DIR });
+  const app = createApp({ dataRoot: root, staticDir: PUBLIC_DIR, onShutdown });
   const server = http.createServer(app.handler);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address();

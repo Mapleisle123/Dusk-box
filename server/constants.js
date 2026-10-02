@@ -45,3 +45,17 @@ export const AUTOSTART_ON_SCRIPT = 'DuskBox-autostart-on.bat';
 export const AUTOSTART_OFF_SCRIPT = 'DuskBox-autostart-off.bat';
 export const DESKTOP_ON_SCRIPT = 'DuskBox-desktop-on.bat';
 export const DESKTOP_OFF_SCRIPT = 'DuskBox-desktop-off.bat';
+
+/**
+ * 「停止服务」接口要求的自定义请求头。
+ *
+ * 服务只绑在 127.0.0.1 上，外部网络进不来；但**浏览器里任何一个网页**都能
+ * 对着 localhost 发请求。所以这里要求一个自定义请求头：
+ * 跨站请求想带上它必须先通过 CORS 预检，而本服务从不放行 CORS，
+ * 于是别的网页就点不到"停止服务"这个按钮。
+ *
+ * 注意它不是一个密钥——同机的本程序（托盘、设置页）本来就有权停止服务，
+ * 它挡的是"别的网页顺手把服务停掉"。
+ */
+export const SHUTDOWN_HEADER = 'x-duskbox-action';
+export const SHUTDOWN_TOKEN = 'shutdown';

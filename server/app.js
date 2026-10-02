@@ -25,7 +25,7 @@ import { mountSettingsRoutes } from './routes/settings.js';
 import { mountBackupRoutes } from './routes/backup.js';
 import { mountDesktopRoutes } from './routes/desktop.js';
 
-import { DB_FILENAME, APP_NAME } from './constants.js';
+import { DB_FILENAME, APP_NAME, SHUTDOWN_HEADER, SHUTDOWN_TOKEN } from './constants.js';
 
 /** 数据库文件名。常量本体在 constants.js，这里再导出是给测试用的。 */
 export { DB_FILENAME };
@@ -34,8 +34,13 @@ export { DB_FILENAME };
  * @param {object} options
  * @param {string} options.dataRoot 数据根目录（数据库与分类文件夹所在处）
  * @param {string} [options.staticDir] 前端静态资源目录
+ * @param {() => void} [options.onShutdown] 「停止服务」被调用时的收尾动作
  */
-export function createApp({ dataRoot, staticDir = path.join(PROJECT_ROOT, 'public') }) {
+export function createApp({
+  dataRoot,
+  staticDir = path.join(PROJECT_ROOT, 'public'),
+  onShutdown,
+}) {
   if (!dataRoot) throw new Error('createApp 需要 dataRoot');
 
   fs.mkdirSync(dataRoot, { recursive: true });
@@ -101,6 +106,30 @@ export function createApp({ dataRoot, staticDir = path.join(PROJECT_ROOT, 'publi
     dbPath,
     time: new Date().toISOString(),
   }));
+
+  /**
+   * 停止本地服务。
+   *
+   * 只有"无窗口启动"这个形态才需要它：以前关掉那个黑窗口就等于停服务，
+   * 现在窗口没了，得另外给一个明确的停止入口（托盘右键、设置页按钮）。
+   *
+   * 两个要点：
+   *   - 必须带自定义请求头（见 constants.js），否则浏览器里别的网页
+   *     也能对着 localhost 发一条请求把服务停掉；
+   *   - **先把响应发出去再退出**。直接退出的话，调用方只会看到
+   *     "连接被重置"，分不清是停成功了还是服务崩了。
+   */
+  router.post('/api/shutdown', ({ req, res }) => {
+    if (req.headers[SHUTDOWN_HEADER] !== SHUTDOWN_TOKEN) {
+      throw new HttpError(403, '缺少停止服务所需的请求头');
+    }
+    if (typeof onShutdown !== 'function') {
+      // 测试实例、或被当作库使用时不带这个回调：明确报错，而不是假装成功
+      throw new HttpError(501, '当前运行方式不支持停止服务');
+    }
+    res.on('finish', () => onShutdown());
+    return { ok: true, stopping: true };
+  });
 
   mountSettingsRoutes(router, ctx);
   mountDesktopRoutes(router, ctx);

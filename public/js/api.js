@@ -15,15 +15,17 @@ export class ApiError extends Error {
   }
 }
 
-async function request(method, path, { json, formData, quiet = false } = {}) {
+async function request(method, path, { json, formData, headers, quiet = false } = {}) {
   if (!quiet) startLoading();
   try {
     const init = { method };
     if (formData) {
       init.body = formData;
     } else if (json !== undefined) {
-      init.headers = { 'Content-Type': 'application/json' };
+      init.headers = { 'Content-Type': 'application/json', ...headers };
       init.body = JSON.stringify(json);
+    } else if (headers) {
+      init.headers = headers;
     }
 
     let res;
@@ -117,6 +119,16 @@ export const api = {
   // ---- 桌面启动器 ----
   getDesktop: () => request('GET', '/api/desktop'),
   setDesktop: (enabled) => request('PUT', '/api/desktop', { json: { enabled } }),
+
+  /**
+   * 停止本地服务。
+   * 必须带上这个自定义请求头：服务端靠它区分"我们自己人"和"浏览器里别的网页"。
+   */
+  shutdown: () =>
+    request('POST', '/api/shutdown', {
+      json: {},
+      headers: { 'X-Duskbox-Action': 'shutdown' },
+    }),
 
   // ---- 背景图 ----
   listBackgrounds: () => request('GET', '/api/backgrounds'),
