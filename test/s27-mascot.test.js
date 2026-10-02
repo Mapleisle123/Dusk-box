@@ -110,6 +110,11 @@ test('S27 · 同一件事一天只提醒一次（不能每次都来烦人）', (
   const mascot = read('public/js/mascot.js');
   assert.match(mascot, /localStorage/, '提醒记录要落在本地');
   assert.match(mascot, /alreadyRemindedToday/, '应先判断今天是不是已经提醒过');
+  assert.match(
+    mascot,
+    /if \(alreadyRemindedToday\(\)\) return;/,
+    '每次挂出来之前要先看今天是否已经提醒过',
+  );
   assert.match(mascot, /api\.home\(/, '提醒内容应来自真实数据（首页聚合）');
 });
 

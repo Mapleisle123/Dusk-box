@@ -1,6 +1,6 @@
 {
   "name": "duskbox",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Dusk Box（茜色箱）· 只在本地运行的个人生活日志应用",

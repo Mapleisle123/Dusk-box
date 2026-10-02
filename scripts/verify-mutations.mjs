@@ -4,13 +4,15 @@
  * 一条测试如果在"改坏了"之后依然通过，它就不是护栏，只是装饰。
  * 这里逐个植入退化写法，每次只植入一处、跑一次、还原，再植入下一处。
  *
- * 覆盖六个测试文件：
+ * 覆盖这些测试文件：
  *   test/s14-logo.test.js           侧栏徽标（尺寸 / 边框 / 圆角）
  *   test/s17-liquid-glass.test.js   液态玻璃材质
  *   test/s18-style-switch.test.js   外观风格切换（简约 / 新粗野主义）
  *   test/s20-custom-background.test.js  自定义背景图（添加 / 删除 / 备份）
  *   test/s19-ascii-filenames.test.js  命名护栏（ASCII 侧 / 中文侧）
  *   test/s8-backup.test.js          备份与恢复（含旧文件名兼容）
+ *   test/s25-projects.test.js       「项目」模块（校验 / 落盘 / 首页投影）
+ *   test/s27-mascot.test.js         吉祥物（位置 / 指针 / 提醒）
  *
  * 每条植入可以用 `tests` 指定只跑相关的测试文件；不写就跑默认的三个。
  * 后两个文件跑起来比前三个慢，所以只让需要它们的植入去跑。
@@ -36,6 +38,32 @@ const TEST_FILES = [
 ];
 
 const rel = (p) => path.join(ROOT, ...p.split('/'));
+
+/** 同步睡一会儿（脚本是串行的，这里没有 await 可用） */
+const sleepSync = (ms) => {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+};
+
+/**
+ * 写文件，带重试。
+ *
+ * 这台机器上偶尔会撞到 `UNKNOWN: unknown error, open …`（文件被别的进程短暂占住，
+ * 通常是杀软正在扫刚写过的文件）。必须重试：本脚本一边改一边还原，
+ * 中途写失败会把"故意改坏的代码"留在工作区里——实测留下过 5 个文件没还原。
+ */
+function writeFile(file, content) {
+  let lastErr;
+  for (let i = 0; i < 10; i += 1) {
+    try {
+      fs.writeFileSync(rel(file), content, 'utf8');
+      return;
+    } catch (err) {
+      lastErr = err;
+      sleepSync(150);
+    }
+  }
+  throw lastErr;
+}
 
 /**
  * 每一条：名字 + 改哪个文件 + 怎么改 + 期望命中的用例名关键词。
@@ -228,8 +256,8 @@ const MUTATIONS = [
     file: 'server/backup.js',
     apply: (js) =>
       js.replace(
-        "const DATA_DIRS = ['发布', '计划', '相册', USER_BACKGROUND_DIRNAME];",
-        "const DATA_DIRS = ['发布', '计划', '相册'];",
+        "const DATA_DIRS = ['发布', '计划', '项目', '相册', USER_BACKGROUND_DIRNAME];",
+        "const DATA_DIRS = ['发布', '计划', '项目', '相册'];",
       ),
     expect: '纳入备份',
     tests: ['test/s20-custom-background.test.js'],
@@ -281,9 +309,14 @@ const MUTATIONS = [
   },
   {
     name: '把启动脚本名退回中文名',
-    file: 'server/autostart.js',
+    // 常量搬到了 constants.js（autostart.js 只是转发）——锚点跟着走，
+    // 否则这条植入会静默地"找不到目标"，护栏有没有牙齿就没人验了
+    file: 'server/constants.js',
     apply: (js) =>
-      js.replace("export const LAUNCHER_NAME = 'DuskBox-start.bat';", "export const LAUNCHER_NAME = '茜色箱启动.bat';"),
+      js.replace(
+        "export const START_SCRIPT = 'DuskBox-start.bat';",
+        "export const START_SCRIPT = '茜色箱启动.bat';",
+      ),
     expect: '三个启动脚本齐备',
     tests: ['test/s19-ascii-filenames.test.js'],
   },
@@ -307,6 +340,54 @@ const MUTATIONS = [
     apply: (css) =>
       css.replace('--border-strong: rgba(18, 22, 32, 0.20);', '--border-strong: transparent;'),
     expect: '边框',
+  },
+  {
+    name: '把吉祥物钉到视口上半部（会挡住各页面右上角的按钮）',
+    file: 'public/css/app.css',
+    tests: ['test/s27-mascot.test.js'],
+    apply: (css) => css.replace('  bottom: 7vh;\n  z-index: 40;', '  top: 7vh;\n  z-index: 40;'),
+    expect: '不许挡住能点的',
+  },
+  {
+    name: '让吉祥物容器吃鼠标事件（它压住的地方就点不动了）',
+    file: 'public/css/app.css',
+    tests: ['test/s27-mascot.test.js'],
+    apply: (css) =>
+      css.replace('  z-index: 40;\n  pointer-events: none;', '  z-index: 40;\n  pointer-events: auto;'),
+    expect: '容器本身不能吃鼠标事件',
+  },
+  {
+    name: '吉祥物图缺失时不再收起（页面上留一个破图）',
+    file: 'public/js/mascot.js',
+    tests: ['test/s27-mascot.test.js'],
+    apply: (js) =>
+      js.replace("img.addEventListener('error', () => unmountMascot(), { once: true });", 'void img;'),
+    expect: '图片加载失败',
+  },
+  {
+    name: '去掉"今天已经提醒过"的判断（每次打开都来烦一次）',
+    file: 'public/js/mascot.js',
+    tests: ['test/s27-mascot.test.js'],
+    apply: (js) => js.replace('  if (alreadyRemindedToday()) return;', '  // 判断被拿掉了'),
+    expect: '已经提醒过',
+  },
+  {
+    name: '项目进度不做范围校验（0~100 之外也写得进去）',
+    file: 'server/services/projects.js',
+    tests: ['test/s25-projects.test.js'],
+    apply: (js) =>
+      js.replace(
+        '    if (!Number.isInteger(progress) || progress < 0 || progress > 100) {',
+        '    if (false) {',
+      ),
+    expect: '进度',
+  },
+  {
+    name: '首页项目区块不再只列进行中的（搁置与完成的也挤进来）',
+    file: 'server/services/projects.js',
+    tests: ['test/s25-projects.test.js'],
+    apply: (js) => js.replace("  const active = all.filter((p) => p.status === 'active');", '  const active = all;'),
+    expect: '首页区块',
   },
 ];
 
@@ -340,7 +421,7 @@ try {
       continue;
     }
 
-    fs.writeFileSync(rel(m.file), mutated, 'utf8');
+    writeFile(m.file, mutated);
     const res = runTest(m.tests);
 
     let verdict;
@@ -362,7 +443,7 @@ try {
     if (!ok) allGood = false;
   }
 } finally {
-  for (const [f, content] of backups) fs.writeFileSync(rel(f), content, 'utf8');
+  for (const [f, content] of backups) writeFile(f, content);
 }
 
 console.log('\n=== 反向验证（S14 徽标 + S17 液态玻璃 + S18 外观风格 + S20 自定义背景图 + S19 命名 + S8 备份兼容）===');
