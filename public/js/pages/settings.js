@@ -14,6 +14,7 @@ import {
   formatBytes,
 } from '../ui.js';
 import { refresh } from '../router.js';
+import { refreshMascot } from '../mascot.js';
 
 /**
  * 外观风格的兜底值。
@@ -32,6 +33,8 @@ function appearanceBlock(settings, backgrounds) {
   const defaultImage = String(backgrounds?.defaultImage ?? '');
   // 老版本服务端可能还没有 style 这一项，回落到默认值，别让整页炸掉
   const currentStyle = String(settings.style ?? DEFAULT_STYLE);
+  // 吉祥物默认显示，只有明确存了 false 才不显示
+  const mascotOn = String(settings.mascot ?? 'true') !== 'false';
 
   /**
    * 缩略图列表。
@@ -154,6 +157,20 @@ function appearanceBlock(settings, backgrounds) {
                或者往项目的 img/background 目录里放一张。
              </p>`
       }
+
+      <div class="settings-row">
+        <div>
+          <div class="s-label">吉祥物「祀」</div>
+          <div class="s-desc">
+            页面右侧那个会动的 Q 版小人：鼠标靠近会展开，点一下会说句话。<br>
+            形象图放在项目里的 <span class="mono">img/mascot/mascot.png</span>，换一张图就换形象。
+          </div>
+        </div>
+        <div class="s-control">
+          <button class="switch ${mascotOn ? 'on' : ''}" type="button"
+                  data-toggle-mascot aria-label="显示或隐藏吉祥物"></button>
+        </div>
+      </div>
     </div>`;
 }
 
@@ -577,6 +594,21 @@ export async function pageSettings() {
       root.querySelector('[data-export]')?.addEventListener('click', () => {
         window.location.href = '/api/export';
         toastSuccess('正在打包，稍等片刻…');
+      });
+
+      // 吉祥物开关
+      root.querySelector('[data-toggle-mascot]')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        const next = store.settings.mascot === 'false' ? 'true' : 'false';
+        try {
+          await store.update({ mascot: next });
+          // 以服务端回报的值为准（见 S16 的约定）
+          btn.classList.toggle('on', store.settings.mascot !== 'false');
+          refreshMascot();
+          toastSuccess(next === 'true' ? '已显示吉祥物' : '已隐藏吉祥物');
+        } catch (err) {
+          toastError(err.message);
+        }
       });
 
       // 停止服务：先二次确认，再发请求

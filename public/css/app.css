@@ -1762,3 +1762,72 @@ html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }
   color: var(--text-2);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- 吉祥物「祀」 ---- */
+/*
+  两条硬约束，改这里之前先读一遍：
+   1. 它必须落在**视口下半部**（bottom 而不是 top），因为各页面右上角本来就有按钮
+      （发布页的「写一篇」就在那儿），钉在上半部一定会挡住能点的东西；
+   2. 容器本身 pointer-events: none，只有角色本体接鼠标——这样即使它压在什么上面，
+     底下的东西照样点得到。
+*/
+.mascot {
+  position: fixed;
+  right: 0;
+  bottom: 7vh;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.mascot-body {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+  /* 默认半收在屏幕外，鼠标靠近才完全展开 */
+  transform: translateX(56%);
+  transition: transform .45s var(--ease), filter .3s var(--ease);
+}
+
+.mascot-body:hover,
+.mascot-body:focus-visible {
+  transform: translateX(4%) translateY(-6px);
+  filter: drop-shadow(0 10px 22px color-mix(in srgb, var(--primary) 34%, transparent));
+}
+
+.mascot-img {
+  display: block;
+  width: 168px;
+  height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+  /* 呼吸浮动放在图这一层：按钮那层的 transform 要留给"收/展" */
+  animation: mascot-breathe 4.6s ease-in-out infinite;
+}
+
+.mascot-bubble {
+  position: absolute;
+  right: 150px;
+  bottom: 60%;
+  max-width: 220px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: var(--bw) solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity .25s var(--ease), transform .25s var(--ease);
+}
+
+.mascot-bubble.show { opacity: 1; transform: translateY(0); }
+
+@keyframes mascot-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-7px) scale(1.015); }
+}

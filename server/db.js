@@ -142,6 +142,8 @@ export const DEFAULT_SETTINGS = {
   backupDirName: '备份',
   // 页面背景图：img/background 目录下的文件名，空字符串表示不使用背景图
   backgroundImage: 'background.jpg',
+  // 是否显示页面右侧的 Q 版吉祥物（默认显示，可在设置页关掉）
+  mascot: 'true',
   // 注意：开机自启不在这里。它的真实状态是「启动」文件夹里的快捷方式，
   // 见 server/autostart.js 与 GET /api/autostart。
   autoStart: 'false',
