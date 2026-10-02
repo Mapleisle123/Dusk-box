@@ -59,7 +59,7 @@ const READ_SCRIPT = [
 ].join('; ');
 
 /** 执行一段 PowerShell，环境变量用于传参 */
-function runPowerShell(script, env) {
+export function runPowerShell(script, env) {
   return new Promise((resolve, reject) => {
     execFile(
       'powershell',

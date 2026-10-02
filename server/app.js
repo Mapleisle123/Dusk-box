@@ -23,6 +23,7 @@ import { mountAlbumsRoutes } from './routes/albums.js';
 import { mountHomeRoutes } from './routes/home.js';
 import { mountSettingsRoutes } from './routes/settings.js';
 import { mountBackupRoutes } from './routes/backup.js';
+import { mountDesktopRoutes } from './routes/desktop.js';
 
 import { DB_FILENAME, APP_NAME } from './constants.js';
 
@@ -102,6 +103,7 @@ export function createApp({ dataRoot, staticDir = path.join(PROJECT_ROOT, 'publi
   }));
 
   mountSettingsRoutes(router, ctx);
+  mountDesktopRoutes(router, ctx);
   mountPostsRoutes(router, ctx);
   mountPlansRoutes(router, ctx);
   mountAlbumsRoutes(router, ctx);

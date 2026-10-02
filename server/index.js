@@ -14,6 +14,7 @@ import { loadConfig, PROJECT_ROOT } from './config.js';
 import { startScheduler } from './backup.js';
 import { openBrowser } from './browser.js';
 import { refreshAutostartTarget } from './autostart.js';
+import { refreshDesktopShortcutTarget } from './desktop.js';
 
 /** 检查端口是否可用 */
 function isPortFree(port, host = '127.0.0.1') {
@@ -67,6 +68,9 @@ async function main() {
     // 放在监听之后异步做：它是"维护动作"，不该拖慢服务可用时间。
     refreshAutostartTarget().catch((err) => {
       console.error('[Dusk Box] 校正开机自启快捷方式失败（不影响使用）：', err.message);
+    });
+    refreshDesktopShortcutTarget().catch((err) => {
+      console.error('[Dusk Box] 校正桌面快捷方式失败（不影响使用）：', err.message);
     });
   });
 

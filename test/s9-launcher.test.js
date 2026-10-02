@@ -21,6 +21,8 @@ import {
   AUTOSTART_OFF_SCRIPT,
   AUTOSTART_ON_SCRIPT,
   DB_FILENAME,
+  DESKTOP_OFF_SCRIPT,
+  DESKTOP_ON_SCRIPT,
   LAUNCH_SCRIPT,
 } from '../server/constants.js';
 import { LAUNCHER_NAME, SHORTCUT_NAME } from '../server/autostart.js';
@@ -136,6 +138,8 @@ test('S9 · 启动脚本与配套文件齐备', () => {
     LAUNCH_SCRIPT,
     AUTOSTART_ON_SCRIPT,
     AUTOSTART_OFF_SCRIPT,
+    DESKTOP_ON_SCRIPT,
+    DESKTOP_OFF_SCRIPT,
     'package.json',
   ]) {
     assert.ok(fs.existsSync(path.join(PROJECT_ROOT, name)), `应存在 ${name}`);
@@ -166,6 +170,14 @@ test('S9 · 启动脚本与配套文件齐备', () => {
 
   const uninstall = readBat(AUTOSTART_OFF_SCRIPT);
   assert.ok(uninstall.includes(SHORTCUT_NAME), '取消脚本应删除对应快捷方式');
+
+  // 桌面启动器：与开机自启同一套路，区别只是写进哪个目录
+  const desktopOn = readBat(DESKTOP_ON_SCRIPT);
+  assert.ok(desktopOn.includes('Desktop'), '桌面脚本应写进桌面目录');
+  assert.ok(desktopOn.includes(LAUNCH_SCRIPT), `桌面图标应指向无窗口启动器 ${LAUNCH_SCRIPT}`);
+
+  const desktopOff = readBat(DESKTOP_OFF_SCRIPT);
+  assert.ok(desktopOff.includes(SHORTCUT_NAME), '移除桌面图标的脚本应删掉对应快捷方式');
 });
 
 /**
@@ -180,17 +192,23 @@ test('S9 · 启动脚本与配套文件齐备', () => {
  *   - 纯 LF 行尾：多行 if 块与 echo 语句解析错位，整个脚本崩掉
  * 正确组合：GBK/936 编码（与 cmd 默认代码页一致） + CRLF 行尾 + 不带 BOM。
  */
-test('S9 · 三个 bat 必须是 GBK 编码 + CRLF 行尾，且不带 BOM', () => {
+test('S9 · 所有 bat 必须是 GBK 编码 + CRLF 行尾，且不带 BOM', () => {
   const gbk = new TextDecoder('gbk');
 
-  for (const name of [LAUNCHER_NAME, 'DuskBox-autostart-on.bat', 'DuskBox-autostart-off.bat']) {
+  for (const name of [
+    LAUNCHER_NAME,
+    AUTOSTART_ON_SCRIPT,
+    AUTOSTART_OFF_SCRIPT,
+    DESKTOP_ON_SCRIPT,
+    DESKTOP_OFF_SCRIPT,
+  ]) {
     const buf = fs.readFileSync(path.join(PROJECT_ROOT, name));
 
     // 编码：cmd 在 936 代码页下逐字节解析脚本，文件必须是 GBK 才能对上。
     // 用 GBK 解码能读回中文，就说明存的是 GBK；存成 UTF-8 时这里会是乱码。
     const text = gbk.decode(buf);
     // 用"能否解出汉字"而不是"是否包含某个词"来判断：
-    // 三个脚本的措辞不同，共有的只是"它们是中文脚本"这件事。
+    // 这些脚本的措辞不同，共有的只是"它们是中文脚本"这件事。
     assert.ok(
       /[一-龥]/.test(text),
       `${name} 应以 GBK(本地代码页) 编码保存；当前用 GBK 解码读不出中文，说明编码不对`,

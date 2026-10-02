@@ -264,20 +264,42 @@ function backupListBlock(backups) {
     </div>`;
 }
 
-function aboutBlock(autostart) {
+function aboutBlock(autostart, desktop) {
   const supported = autostart?.supported !== false;
   const enabled = Boolean(autostart?.enabled);
   const stateText = !supported ? '仅 Windows 支持' : enabled ? '已开启' : '未开启';
+
+  const desktopSupported = desktop?.supported !== false;
+  const desktopOn = Boolean(desktop?.exists);
+  const desktopText = !desktopSupported ? '仅 Windows 支持' : desktopOn ? '已放在桌面' : '未创建';
 
   return `
     <div class="card settings-block">
       <div class="section-title mb-3">关于</div>
       <div class="settings-row">
         <div>
+          <div class="s-label">桌面启动器</div>
+          <div class="s-desc">
+            在桌面上放一个图标，双击就能打开茜色箱，不会弹出黑色窗口。<br>
+            也可以直接双击目录里的「DuskBox-desktop-on.bat」或「DuskBox-desktop-off.bat」，两种方式等效。
+          </div>
+        </div>
+        <div class="s-control">
+          ${
+            desktopSupported
+              ? `<span class="s-state ${desktopOn ? 'is-on' : ''}" data-desktop-state>${esc(desktopText)}</span>
+                 <button class="switch ${desktopOn ? 'on' : ''}" type="button"
+                         data-toggle-desktop aria-label="创建或移除桌面图标"></button>`
+              : `<span class="tag">${esc(desktopText)}</span>`
+          }
+        </div>
+      </div>
+      <div class="settings-row">
+        <div>
           <div class="s-label">开机自动启动</div>
           <div class="s-desc">
-            开启后每次开机在后台自行启动（窗口最小化）。<br>
-            也可以直接双击目录里的「安装开机自启.bat」或「取消开机自启.bat」，两种方式等效。
+            开启后每次开机在后台自行启动，<span class="mono">不弹窗口</span>，也不用点桌面图标。<br>
+            也可以直接双击目录里的「DuskBox-autostart-on.bat」或「DuskBox-autostart-off.bat」，两种方式等效。
           </div>
         </div>
         <div class="s-control">
@@ -383,12 +405,14 @@ async function restoreFlow(name) {
 // ===========================================================================
 
 export async function pageSettings() {
-  const [{ settings, runtime }, { backups }, autostart, backgrounds] = await Promise.all([
+  const [{ settings, runtime }, { backups }, autostart, backgrounds, desktop] = await Promise.all([
     api.getSettings(),
     api.listBackups(),
     api.getAutostart(),
     // 背景图列表失败时不连累整页设置（老版本服务端可能还没有这个接口）
     api.listBackgrounds().catch(() => ({ images: [], current: '', defaultImage: '' })),
+    // 同上的道理：桌面启动器接口拿不到就当"不支持"，别让整页设置炸掉
+    api.getDesktop().catch(() => ({ exists: false, supported: false })),
   ]);
 
   const html = `
@@ -403,7 +427,7 @@ export async function pageSettings() {
       ${dataBlock(runtime)}
       ${backupBlock(settings)}
       ${backupListBlock(backups)}
-      ${aboutBlock(autostart)}
+      ${aboutBlock(autostart, desktop)}
     </div>`;
 
   return {
@@ -541,6 +565,27 @@ export async function pageSettings() {
       root.querySelector('[data-export]')?.addEventListener('click', () => {
         window.location.href = '/api/export';
         toastSuccess('正在打包，稍等片刻…');
+      });
+
+      // 桌面启动器：与开机自启同一套路，状态以服务端回报的"快捷方式在不在"为准
+      root.querySelector('[data-toggle-desktop]')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        const next = !btn.classList.contains('on');
+        btn.disabled = true;
+        try {
+          const res = await api.setDesktop(next);
+          btn.classList.toggle('on', res.exists);
+          const state = root.querySelector('[data-desktop-state]');
+          if (state) {
+            state.textContent = res.exists ? '已放在桌面' : '未创建';
+            state.classList.toggle('is-on', res.exists);
+          }
+          toastSuccess(res.exists ? '已创建桌面图标' : '已移除桌面图标');
+        } catch (err) {
+          toastError(err.message);
+        } finally {
+          btn.disabled = false;
+        }
       });
 
       // 开机自启

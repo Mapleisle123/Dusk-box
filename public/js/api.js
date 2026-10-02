@@ -114,6 +114,10 @@ export const api = {
   getAutostart: () => request('GET', '/api/autostart'),
   setAutostart: (enabled) => request('PUT', '/api/autostart', { json: { enabled } }),
 
+  // ---- 桌面启动器 ----
+  getDesktop: () => request('GET', '/api/desktop'),
+  setDesktop: (enabled) => request('PUT', '/api/desktop', { json: { enabled } }),
+
   // ---- 背景图 ----
   listBackgrounds: () => request('GET', '/api/backgrounds'),
   // 图片走 multipart 交给本地服务落盘（存在数据目录里，不上传到任何地方）
