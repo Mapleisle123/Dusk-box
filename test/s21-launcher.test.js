@@ -53,8 +53,11 @@ function tempConfig(dataRoot, port) {
 async function withConfig(file, fn) {
   const saved = process.env.QSX_CONFIG_FILE;
   const savedOpen = process.env.QSX_NO_OPEN;
+  const savedTray = process.env.QSX_NO_TRAY;
   process.env.QSX_CONFIG_FILE = file;
   process.env.QSX_NO_OPEN = '1';
+  // 测试不该在用户右下角留下图标（托盘另有 s24 专测）
+  process.env.QSX_NO_TRAY = '1';
   try {
     return await fn();
   } finally {
@@ -62,6 +65,8 @@ async function withConfig(file, fn) {
     else process.env.QSX_CONFIG_FILE = saved;
     if (savedOpen === undefined) delete process.env.QSX_NO_OPEN;
     else process.env.QSX_NO_OPEN = savedOpen;
+    if (savedTray === undefined) delete process.env.QSX_NO_TRAY;
+    else process.env.QSX_NO_TRAY = savedTray;
   }
 }
 
@@ -238,7 +243,12 @@ test(
     const cfg = tempConfig(dataRoot, port);
     t.after(() => rmrf(root, cfg.dir));
 
-    const env = { ...process.env, QSX_NO_OPEN: '1', QSX_CONFIG_FILE: cfg.file };
+    const env = {
+      ...process.env,
+      QSX_NO_OPEN: '1',
+      QSX_NO_TRAY: '1',
+      QSX_CONFIG_FILE: cfg.file,
+    };
     const child = spawn('wscript.exe', [path.join(PROJECT_ROOT, LAUNCH_SCRIPT)], {
       cwd: PROJECT_ROOT,
       env,

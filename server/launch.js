@@ -31,6 +31,11 @@ import { openBrowser } from './browser.js';
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ENTRY = path.join(MODULE_DIR, 'index.js');
 
+/** 托盘脚本（右下角那个小图标） */
+export function trayScriptPath() {
+  return path.join(PROJECT_ROOT, 'launcher', 'tray.ps1');
+}
+
 /** 端口向后扫描的范围，与 index.js 的降级范围保持一致 */
 export const PORT_SCAN = 20;
 
@@ -138,17 +143,62 @@ export function spawnServer(env = process.env) {
 }
 
 /**
+ * 把托盘图标拉起来。
+ *
+ * 托盘脚本内部有单例互斥体：已经有一个在跑时它会自己安静退出，
+ * 所以这里不必先查一遍"有没有起过"——那样反而会多一次竞态。
+ *
+ * QSX_NO_TRAY=1 用于测试：跑测试时不该在用户右下角留下一个小图标。
+ */
+export function startTray(env = process.env) {
+  if (process.platform !== 'win32') return null;
+  if (env.QSX_NO_TRAY === '1') return null;
+  const script = trayScriptPath();
+  if (!fs.existsSync(script)) return null;
+
+  try {
+    const child = spawn(
+      'powershell',
+      [
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-Sta', // WinForms 托盘必须跑在 STA 线程上
+        '-WindowStyle',
+        'Hidden',
+        '-File',
+        script,
+      ],
+      {
+        cwd: PROJECT_ROOT,
+        env: { ...process.env, ...env },
+        detached: true,
+        windowsHide: true,
+        stdio: 'ignore',
+      },
+    );
+    child.unref();
+    return child;
+  } catch {
+    // 托盘起不来不该拦住用户打开界面
+    return null;
+  }
+}
+
+/**
  * @param {object} [options]
  * @param {NodeJS.ProcessEnv} [options.env]
+ * @param {(env?: NodeJS.ProcessEnv) => unknown} [options.startTray] 拉起托盘的方式（测试可替换）
  * @returns {Promise<{started:boolean, port:number|null}>} started 表示这次是不是由本进程拉起的服务
  */
-export async function main({ env = process.env } = {}) {
+export async function main({ env = process.env, startTray: trayStarter = startTray } = {}) {
   const config = loadConfig();
   const shouldOpen = env.QSX_NO_OPEN !== '1';
 
   const running = await findRunningPort(config.port);
   if (running) {
     if (shouldOpen) openBrowser(`http://localhost:${running}`);
+    trayStarter(env);
     return { started: false, port: running };
   }
 
@@ -156,6 +206,7 @@ export async function main({ env = process.env } = {}) {
     // 别人正在启动：等它起来，把界面打开就好，不能再起一个
     const port = await waitForService(config.port);
     if (port && shouldOpen) openBrowser(`http://localhost:${port}`);
+    if (port) trayStarter(env);
     return { started: false, port };
   }
 
@@ -163,6 +214,7 @@ export async function main({ env = process.env } = {}) {
     spawnServer(env);
     const port = await waitForService(config.port);
     if (port && shouldOpen) openBrowser(`http://localhost:${port}`);
+    if (port) trayStarter(env);
     return { started: true, port };
   } finally {
     releaseStartLock(config.dataRoot);
