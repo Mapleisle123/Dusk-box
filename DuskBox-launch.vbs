@@ -45,8 +45,10 @@ Function FindNode(fso, sh)
 
   ' Last resort: ask PATH. The result goes through a temp file so that
   ' no console window flashes on screen while the user is watching.
+  ' The file name is unique per run: two launches at the same time (double
+  ' click again because "nothing happened yet") must not read each other's file.
   Dim tmp, f
-  tmp = sh.ExpandEnvironmentStrings("%TEMP%") & "\duskbox-which-node.txt"
+  tmp = fso.BuildPath(fso.GetSpecialFolder(2), fso.GetTempName())
   sh.Run "cmd /c where node > """ & tmp & """ 2>nul", 0, True
   FindNode = ""
   If fso.FileExists(tmp) Then

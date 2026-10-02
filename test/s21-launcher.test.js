@@ -258,17 +258,35 @@ test(
       if (child.exitCode === null) child.kill();
     });
 
+    /**
+     * 找"我们自己的"服务。
+     *
+     * 两个讲究：
+     *   - 扫一段端口而不是只探配置端口：端口被抢走时服务会自己往后退，
+     *     只探一个端口会把"其实起来了"误判成失败；
+     *   - 认 dataRoot 而不是只看端口通不通：并行跑测试时，
+     *     隔壁用例的服务就监听在附近的端口上，认错了就会得到莫名其妙的失败。
+     */
+    const findOurs = async () => {
+      for (let i = 0; i < 20; i += 1) {
+        const health = await healthAt(port + i);
+        if (health && health.dataRoot === dataRoot) return { port: port + i, health };
+      }
+      return null;
+    };
+
     // 启动器自己会判断、自己会等，这里只等结果
     const begin = Date.now();
-    let health = null;
+    let found = null;
     while (Date.now() - begin < 30000) {
-      health = await healthAt(port);
-      if (health) break;
+      found = await findOurs();
+      if (found) break;
       await new Promise((r) => setTimeout(r, 200));
     }
 
+    const health = found?.health ?? null;
     if (health) t.after(() => stopPid(health.pid));
-    assert.ok(health, '双击启动器应能在配置端口上把服务拉起来');
+    assert.ok(health, '双击启动器应能把服务拉起来');
     assert.equal(health.dataRoot, dataRoot, '应使用配置里的临时数据目录');
 
     // 再双击一次：不该再起一个进程
@@ -282,8 +300,13 @@ test(
     });
     await new Promise((r) => setTimeout(r, 3000));
 
-    const after = await healthAt(port);
-    assert.equal(after.pid, health.pid, '重复双击不该换进程');
-    assert.equal(await findRunningPort(port + 1), null, '重复双击不该起出第二个实例');
+    // 同一份数据目录上应当**有且只有一个**服务实例
+    const instances = [];
+    for (let i = 0; i < 20; i += 1) {
+      const h = await healthAt(found.port + i);
+      if (h && h.dataRoot === dataRoot) instances.push({ port: found.port + i, pid: h.pid });
+    }
+    assert.equal(instances.length, 1, `同一份数据目录上出现了 ${instances.length} 个实例`);
+    assert.equal(instances[0].pid, health.pid, '重复双击不该换进程');
   },
 );
