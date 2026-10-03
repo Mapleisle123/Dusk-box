@@ -198,7 +198,7 @@ test(
   },
 );
 
-test('S24 · 托盘由"服务本体"拉起，启动器不再重复做（实测启动器那条路拉不起来）', async (t) => {
+test('S24 · 托盘不再自动启动；停服务改由桌面「停止服务」快捷方式 + 设置页按钮', async (t) => {
   const srv = await startTestServer();
   t.after(() => srv.close());
 
@@ -216,11 +216,24 @@ test('S24 · 托盘由"服务本体"拉起，启动器不再重复做（实测�
   // 而"服务本体启动时拉"这条路径可靠——bat 启动就有托盘。所以只留一条路。
   await main({ env: { ...process.env, QSX_NO_OPEN: '1' } });
   const index = fs.readFileSync(path.join(PROJECT_ROOT, 'server', 'index.js'), 'utf8');
-  assert.match(index, /startTray\(\)/, '服务本体启动时要拉起托盘');
+  assert.doesNotMatch(
+    index,
+    /startTray\(/,
+    '托盘不该再自动启动（这台机器注册不成系统托盘图标，留着只会多一个后台进程）',
+  );
   assert.doesNotMatch(
     fs.readFileSync(path.join(PROJECT_ROOT, 'server', 'launch.js'), 'utf8'),
     /trayStarter\(/,
     '启动器不该再重复拉托盘（两处并存只会让"到底有没有托盘"变得难查）',
+  );
+  // 退路：桌面上的「停止服务」小脚本，只发一个本地请求
+  const stop = fs.readFileSync(path.join(PROJECT_ROOT, 'DuskBox-stop.vbs'));
+  assert.ok([...stop].every((b) => b < 128), 'stop.vbs 必须是纯 ASCII（WSH 按 ANSI 读 .vbs）');
+  assert.match(stop.toString('latin1'), /api\/shutdown/, '它要靠停止接口停服务');
+  assert.match(
+    fs.readFileSync(path.join(PROJECT_ROOT, 'server', 'desktop.js'), 'utf8'),
+    /DuskBox-stop\.lnk/,
+    '创建桌面图标时应当一并放上「停止服务」快捷方式',
   );
 });
 
