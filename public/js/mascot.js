@@ -196,13 +196,18 @@ function onPointerUp(e) {
 
   // 飞回途中保持"挣扎"，落位之后再变回挥手——这样"她挣脱着回到角落"的
   // 动作才连得上；一松手就变挥手的话，你会看见一张挥手图从页面中间飘回去。
-  // 松手当场就换图：淡入只要 0.2 秒，会在飞回的 0.28 秒里走完，
-  // 所以她"一路挣扎着飞回来"的观感没有了——落地时已经是挥手。
-  // （之前是落位后才换，会在角落里先愣一下 struggle，很违和。）
-  showState(hidden ? 'hide' : 'wave');
-  // 待机计时等她落位再开始
+  // 换图的时机：**快到家的时候**才开始变。
+  //   飞回要 0.28s，淡入要 0.2s；这里等 0.18s 再启动淡入 ——
+  //   她飞完最后一小段的同时，图刚好从挣扎淡成挥手，落地即挥手。
+  // 太早（松手就换）会变成"一路飘着的都是挥手"；太晚（落位后才换）
+  // 会先在角落里挣扎着站一下。这两个极端都试过了，都不对。
   clearTimeout(flyTimer);
   flyTimer = setTimeout(() => {
+    if (state === 'struggle') showState(hidden ? 'hide' : 'wave');
+  }, 180);
+  // 待机计时等她落位再开始
+  clearTimeout(timers.idle);
+  timers.idle = setTimeout(() => {
     if (!hidden) restartIdleTimer();
   }, 300);
 }
