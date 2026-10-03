@@ -40,6 +40,9 @@ let drag = null;
 /** 刚拖完的那一次 click 要丢掉：浏览器在拖动结束后仍会补发 click，
    不丢掉的话她会立刻被"单击=point"覆盖，表现为"拖完定格成 point"。 */
 let justDragged = false;
+/** 单击要等一小会儿再动作：浏览器双击时会先发两次 click 再发 dblclick，
+   不等待的话就变成"先冒 point、再收起"，看着像两个动作连着触发。 */
+let clickTimer = 0;
 let timers = { idle: 0, bubble: 0 };
 
 export function mascotEnabled() {
@@ -220,11 +223,16 @@ export function mountMascot() {
       justDragged = false; // 这次点击是拖动补发的，放过
       return;
     }
-    if (hidden) setHidden(false); // 点露出来的那一条 = 展开
-    else pointAndSay();
+    if (hidden) {
+      setHidden(false); // 收起时点露出来的那一条 = 立即展开
+      return;
+    }
+    clearTimeout(clickTimer);
+    clickTimer = setTimeout(() => pointAndSay(), 260); // 等一等，看是不是双击
   });
   els.body.addEventListener('dblclick', (e) => {
     e.preventDefault();
+    clearTimeout(clickTimer); // 是双击：把刚才那次单击的动作取消掉
     setHidden(true); // 双击 = 收起
   });
   els.body.addEventListener('pointerenter', () => {

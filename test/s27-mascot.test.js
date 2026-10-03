@@ -19,6 +19,23 @@ const read = (rel) => fs.readFileSync(path.join(PROJECT_ROOT, rel), 'utf8');
 
 const ASSETS = ['wave.png', 'struggle.png', 'idle.png', 'point.png'];
 
+test('S27 · 双击不能被拆成"先 point 再 hide"', () => {
+  // 浏览器双击的顺序是 click、click、dblclick。单击若立刻动作，
+  // 用户就会看到 point 闪一下再收起。所以单击必须延迟，并在 dblclick 里取消。
+  const mascot = read('public/js/mascot.js');
+  assert.match(mascot, /clickTimer = setTimeout\(\(\) => pointAndSay\(\)/, '单击要延迟再动作');
+  assert.match(
+    mascot,
+    /addEventListener\('dblclick'[\s\S]{0,220}clearTimeout\(clickTimer\)/,
+    '收到双击时要取消延迟中的单击动作',
+  );
+  const clickBlock = mascot.slice(mascot.indexOf("addEventListener('click'"));
+  assert.ok(
+    clickBlock.indexOf('clickTimer') < clickBlock.indexOf("addEventListener('dblclick'"),
+    '单击处理器里应先挂上延迟计时，再由双击取消',
+  );
+});
+
 test('S27 · 挥手图应比其它张矮一截（她举手时不显得顶到天）', () => {
   // 画布统一是 480x960，但她本人占的高度不一样：挥手那张用户明确要求矮五分之一。
   const boxOf = (name) => {
