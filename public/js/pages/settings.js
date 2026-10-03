@@ -14,6 +14,7 @@ import {
   formatBytes,
 } from '../ui.js';
 import { refresh } from '../router.js';
+import { refreshMascot } from '../mascot.js';
 
 /**
  * 外观风格的兜底值。
@@ -32,6 +33,8 @@ function appearanceBlock(settings, backgrounds) {
   const defaultImage = String(backgrounds?.defaultImage ?? '');
   // 老版本服务端可能还没有 style 这一项，回落到默认值，别让整页炸掉
   const currentStyle = String(settings.style ?? DEFAULT_STYLE);
+  // 吉祥物默认显示，只有明确存了 false 才不显示
+  const mascotOn = String(settings.mascot ?? 'true') !== 'false';
 
   /**
    * 缩略图列表。
@@ -154,6 +157,20 @@ function appearanceBlock(settings, backgrounds) {
                或者往项目的 img/background 目录里放一张。
              </p>`
       }
+
+      <div class="settings-row">
+        <div>
+          <div class="s-label">吉祥物「祀」</div>
+          <div class="s-desc">
+            左侧导航下面那个小人：切页挥手、拖动挣扎、静置十秒待机；<br>
+            鼠标移到她身上，她会指着右边告诉你这一页能做什么。
+          </div>
+        </div>
+        <div class="s-control">
+          <button class="switch ${mascotOn ? 'on' : ''}" type="button"
+                  data-toggle-mascot aria-label="显示或隐藏吉祥物"></button>
+        </div>
+      </div>
     </div>`;
 }
 
@@ -651,6 +668,20 @@ export async function pageSettings() {
       });
 
       // 自动备份开关
+      // 吉祥物开关：与其它开关同一套写法（状态以服务端回报的值为准）
+      root.querySelector('[data-toggle-mascot]')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        const next = store.settings.mascot === 'false' ? 'true' : 'false';
+        try {
+          await store.update({ mascot: next });
+          btn.classList.toggle('on', store.settings.mascot !== 'false');
+          refreshMascot();
+          toastSuccess(next === 'true' ? '已显示吉祥物' : '已隐藏吉祥物');
+        } catch (err) {
+          toastError(err.message);
+        }
+      });
+
       root.querySelector('[data-toggle-backup]')?.addEventListener('click', async (e) => {
         // 同上：e.currentTarget 在 await 之后会变成 null，先同步取出来
         const btn = e.currentTarget;
