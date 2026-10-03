@@ -151,9 +151,9 @@ function openProjectEditor(item) {
     footer: `
       <button class="btn" data-act="cancel" type="button">取消</button>
       <button class="btn btn-primary" data-act="save" type="button">${editing ? '保存' : '创建'}</button>`,
-    onMount: ({ root, foot, close }) => {
-      const progress = root.querySelector('#pj-progress');
-      const label = root.querySelector('#pj-progress-label');
+    onMount: ({ body, foot, close }) => {
+      const progress = body.querySelector('#pj-progress');
+      const label = body.querySelector('#pj-progress-label');
       progress?.addEventListener('input', () => {
         if (label) label.textContent = progress.value;
       });
@@ -161,7 +161,7 @@ function openProjectEditor(item) {
       foot.querySelector('[data-act="cancel"]').addEventListener('click', close);
 
       // 删掉一张已有的成果图（图在磁盘上，删完要立刻重渲染，免得界面上还挂着）
-      root.querySelectorAll('[data-media-del]').forEach((btn) => {
+      body.querySelectorAll('[data-media-del]').forEach((btn) => {
         btn.addEventListener('click', async () => {
           const yes = await confirmDialog({
             title: '删除这张图？',
@@ -183,12 +183,12 @@ function openProjectEditor(item) {
       foot.querySelector('[data-act="save"]').addEventListener('click', async (e) => {
         const btn = e.currentTarget;
         const form = new FormData();
-        form.append('name', root.querySelector('#pj-name').value.trim());
-        form.append('status', root.querySelector('#pj-status').value);
-        form.append('startDate', root.querySelector('#pj-start').value);
+        form.append('name', body.querySelector('#pj-name').value.trim());
+        form.append('status', body.querySelector('#pj-status').value);
+        form.append('startDate', body.querySelector('#pj-start').value);
         form.append('progress', progress.value);
-        form.append('result', root.querySelector('#pj-result').value);
-        for (const file of root.querySelector('#pj-files').files) form.append('files', file);
+        form.append('result', body.querySelector('#pj-result').value);
+        for (const file of body.querySelector('#pj-files').files) form.append('files', file);
 
         btn.disabled = true;
         try {
@@ -242,11 +242,11 @@ export async function pageProjects() {
   return {
     html,
     mount(root) {
-      root.querySelectorAll('[data-project-new]').forEach((btn) => {
+      body.querySelectorAll('[data-project-new]').forEach((btn) => {
         btn.addEventListener('click', () => openProjectEditor(null));
       });
 
-      root.querySelectorAll('[data-project-edit]').forEach((btn) => {
+      body.querySelectorAll('[data-project-edit]').forEach((btn) => {
         btn.addEventListener('click', async () => {
           try {
             const project = await api.getProject(btn.dataset.projectEdit);
@@ -257,11 +257,11 @@ export async function pageProjects() {
         });
       });
 
-      root.querySelectorAll('[data-project-done]').forEach((btn) => {
+      body.querySelectorAll('[data-project-done]').forEach((btn) => {
         btn.addEventListener('click', () => setStatus(btn.dataset.projectDone, 'done'));
       });
 
-      root.querySelectorAll('[data-project-del]').forEach((btn) => {
+      body.querySelectorAll('[data-project-del]').forEach((btn) => {
         btn.addEventListener('click', async () => {
           const yes = await confirmDialog({
             title: '删除这个项目？',
@@ -281,7 +281,7 @@ export async function pageProjects() {
       });
 
       // 拖动进度条松手即保存（用 change 而不是 input：拖动过程中不打扰服务端）
-      root.querySelectorAll('[data-project-range]').forEach((range) => {
+      body.querySelectorAll('[data-project-range]').forEach((range) => {
         range.addEventListener('change', async () => {
           const card = range.closest('[data-project]');
           const id = card?.dataset.project;

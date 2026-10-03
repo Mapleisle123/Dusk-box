@@ -102,3 +102,20 @@ test('S26 · 项目状态与界面文案一致（进行中 / 搁置 / 已完成�
     );
   }
 });
+
+test('S26 · 弹窗回调只能用 openModal 真正给出的字段（用错会让按钮全部失灵）', () => {
+  // openModal 的 onMount 收到的是 { body, foot, close }——**没有 root**。
+  // 写成 root 的话，回调一开始就抛异常，取消与保存两个按钮都不会绑上事件，
+  // 表现就是"点创建没反应、点取消也没反应"（项目页当初就踩了这个坑）。
+  const pages = ['projects.js', 'plans.js', 'albums.js', 'settings.js', 'posts.js', 'home.js'];
+  for (const name of pages) {
+    const src = read(`public/js/pages/${name}`);
+    for (const m of src.matchAll(/onMount:\s*\(\s*\{([^}]*)\}/g)) {
+      const fields = m[1].split(',').map((s) => s.trim().split(':')[0].trim());
+      assert.ok(
+        !fields.includes('root') && !fields.includes('modalRoot'),
+        `${name} 的 onMount 不该用 root（openModal 给的是 body / foot / close）`,
+      );
+    }
+  }
+});
