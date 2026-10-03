@@ -189,8 +189,11 @@ $script:IconBitmaps = @()
 # 单例：已经有一个托盘在跑就不再起第二个（用户连点两次启动器也不会出现两个图标）。
 # 用 Local\ 前缀：只在这一台机器的当前登录会话里唯一，不跨会话占名字。
 $script:TrayMutex = New-Object System.Threading.Mutex ($false, 'Local\DuskBoxTray')
-if (-not $script:TrayMutex.WaitOne(0)) {
-  exit 0
+# 探针/自检是诊断用的，不该被"已经有一个托盘在跑"挡住（测试就要靠它们）。
+if (-not $Probe -and -not $SelfTest) {
+  if (-not $script:TrayMutex.WaitOne(0)) {
+    exit 0
+  }
 }
 
 $context = New-Object System.Windows.Forms.ApplicationContext

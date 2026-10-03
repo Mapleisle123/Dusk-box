@@ -188,17 +188,15 @@ export function startTray(env = process.env) {
 /**
  * @param {object} [options]
  * @param {NodeJS.ProcessEnv} [options.env]
- * @param {(env?: NodeJS.ProcessEnv) => unknown} [options.startTray] 拉起托盘的方式（测试可替换）
  * @returns {Promise<{started:boolean, port:number|null}>} started 表示这次是不是由本进程拉起的服务
  */
-export async function main({ env = process.env, startTray: trayStarter = startTray } = {}) {
+export async function main({ env = process.env } = {}) {
   const config = loadConfig();
   const shouldOpen = env.QSX_NO_OPEN !== '1';
 
   const running = await findRunningPort(config.port);
   if (running) {
     if (shouldOpen) openBrowser(`http://localhost:${running}`);
-    trayStarter(env);
     return { started: false, port: running };
   }
 
@@ -206,7 +204,6 @@ export async function main({ env = process.env, startTray: trayStarter = startTr
     // 别人正在启动：等它起来，把界面打开就好，不能再起一个
     const port = await waitForService(config.port);
     if (port && shouldOpen) openBrowser(`http://localhost:${port}`);
-    if (port) trayStarter(env);
     return { started: false, port };
   }
 
@@ -214,7 +211,6 @@ export async function main({ env = process.env, startTray: trayStarter = startTr
     spawnServer(env);
     const port = await waitForService(config.port);
     if (port && shouldOpen) openBrowser(`http://localhost:${port}`);
-    if (port) trayStarter(env);
     return { started: true, port };
   } finally {
     releaseStartLock(config.dataRoot);

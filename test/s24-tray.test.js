@@ -198,7 +198,7 @@ test(
   },
 );
 
-test('S24 · 启动器会顺手把托盘拉起来，且测试环境里不拉（不在用户桌面留图标）', async (t) => {
+test('S24 · 托盘由"服务本体"拉起，启动器不再重复做（实测启动器那条路拉不起来）', async (t) => {
   const srv = await startTestServer();
   t.after(() => srv.close());
 
@@ -212,20 +212,16 @@ test('S24 · 启动器会顺手把托盘拉起来，且测试环境里不拉（�
     else process.env.QSX_CONFIG_FILE = saved;
   });
 
-  // 用替身记录"到底有没有去拉托盘"，避免测试真的弹出一个小图标
-  const calls = [];
-  await main({
-    env: { ...process.env, QSX_NO_OPEN: '1' },
-    startTray: (env) => calls.push(env),
-  });
-  assert.equal(calls.length, 1, '启动器应把托盘拉起来（否则就没有停止服务的入口了）');
-
-  calls.length = 0;
-  await main({
-    env: { ...process.env, QSX_NO_OPEN: '1', QSX_NO_TRAY: '1' },
-    startTray: (env) => calls.push(env),
-  });
-  assert.equal(calls.length, 1, '是否跳过托盘由 startTray 自己判断（它认 QSX_NO_TRAY）');
+  // 启动器不再自己拉托盘：实测（用户那边）经 VBS 启动时那条 spawn 起不来，
+  // 而"服务本体启动时拉"这条路径可靠——bat 启动就有托盘。所以只留一条路。
+  await main({ env: { ...process.env, QSX_NO_OPEN: '1' } });
+  const index = fs.readFileSync(path.join(PROJECT_ROOT, 'server', 'index.js'), 'utf8');
+  assert.match(index, /startTray\(\)/, '服务本体启动时要拉起托盘');
+  assert.doesNotMatch(
+    fs.readFileSync(path.join(PROJECT_ROOT, 'server', 'launch.js'), 'utf8'),
+    /trayStarter\(/,
+    '启动器不该再重复拉托盘（两处并存只会让"到底有没有托盘"变得难查）',
+  );
 });
 
 test('S24 · QSX_NO_TRAY=1 时真的不会起托盘进程', () => {
