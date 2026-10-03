@@ -203,7 +203,7 @@ function onPointerUp(e) {
       showState(hidden ? 'hide' : 'wave');
       if (!hidden) restartIdleTimer();
     }
-  }, 400);
+  }, 300); // 飞回之后很快就换回挥手，别让那一格"停着不动"显得卡
 }
 
 // ---- 挂载 / 卸载 ---------------------------------------------------------

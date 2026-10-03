@@ -1812,7 +1812,8 @@ html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }
   background: none;
   cursor: grab;
   touch-action: none; /* 拖动时不要被浏览器的滚动手势抢走 */
-  transition: transform .38s var(--ease), filter .3s var(--ease);
+  /* 飞回原位也要利落：0.28s，和"落位后换挥手"的 300ms 刚好接上 */
+  transition: transform .28s var(--ease), filter .3s var(--ease);
 }
 
 .mascot-body:hover,
@@ -1846,8 +1847,10 @@ html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }
   object-fit: contain;
   object-position: bottom center;
   opacity: 0;
-  transform: translateY(5px);
-  transition: opacity .34s var(--ease), transform .34s var(--ease);
+  transform: translateY(3px);
+  /* 切换要快而顺：0.2s 看得出"淡入"又不会觉得慢；will-change 让它走合成层 */
+  transition: opacity .2s var(--ease), transform .2s var(--ease);
+  will-change: opacity;
   user-select: none;
   -webkit-user-drag: none;
 }
