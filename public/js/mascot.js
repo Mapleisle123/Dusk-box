@@ -249,13 +249,15 @@ export function mountMascot() {
         )
         .join('')}
       <span class="mascot-bubble" hidden></span>
-    </button>`;
+    </button>
+    <span class="mascot-handle" aria-hidden="true"></span>`;
   document.body.appendChild(wrap);
 
   els = {
     wrap,
     body: wrap.querySelector('.mascot-body'),
     bubble: wrap.querySelector('.mascot-bubble'),
+    handle: wrap.querySelector('.mascot-handle'),
   };
   layers = [...wrap.querySelectorAll('.mascot-img')];
   state = 'wave';
@@ -299,6 +301,12 @@ export function mountMascot() {
     clearTimeout(clickTimer); // 是双击：把刚才那次单击的动作取消掉
     pinned = false;
     setHidden(true); // 双击 = 收起
+  });
+  // 收起时只有这个小把手接点击：她整块 196×392 会压住侧栏下部的导航项
+  // （点"设置"被她截胡就是这个原因），缩成一小条就互不打扰了。
+  els.handle.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (hidden) setHidden(false);
   });
   // 悬停不做任何反应：用户明确只要"单击 / 双击 / 长按拖拽"三个动作。
 

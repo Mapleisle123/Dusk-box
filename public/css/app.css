@@ -1862,11 +1862,28 @@ html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }
    鼠标移上去会再多露 4%，点一下就展开。 */
 .mascot.is-hidden .mascot-body {
   transform: translateX(var(--mascot-shift, -72%));
+  /* 收起时她本人不接点击，改用下面那个小把手 */
+  pointer-events: none;
 }
 
 .mascot.is-hidden .mascot-body:hover {
   transform: translateX(calc(var(--mascot-shift, -72%) + 4%));
 }
+
+/* 收起时的"小把手"：只有它是可点的，位置贴着左侧那一条，
+   尺寸刻意做小（46×140），免得压住侧栏下部的导航项。 */
+.mascot-handle {
+  display: none;
+  position: fixed;
+  left: 0;
+  bottom: 64px;
+  width: 46px;
+  height: 140px;
+  cursor: pointer;
+  z-index: 61;
+}
+
+.mascot.is-hidden .mascot-handle { display: block; }
 
 /* 气泡在她右边：手指朝右，话接在手指的方向上 */
 .mascot-bubble {

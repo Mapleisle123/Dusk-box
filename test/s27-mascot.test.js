@@ -31,6 +31,28 @@ test('S27 · 五张图要预热、双击判定别拖太长（否则单击显得�
   );
 });
 
+test('S27 · 收起时只有小把手接点击，别压住侧栏的导航项', () => {
+  // 她收起后整块仍有 196×392，压在侧栏下部（"设置"就在那一带），
+  // 点导航会先打在她身上 → 变成"点设置老是触发她"。
+  const mascot = read('public/js/mascot.js');
+  const css = read('public/css/app.css');
+  assert.match(mascot, /mascot-handle/, '要有一个只有收起时才出现的小把手');
+  assert.match(
+    mascot,
+    /els\.handle\.addEventListener\('click'[\s\S]{0,80}if \(hidden\) setHidden\(false\)/,
+    '点把手要能展开',
+  );
+  assert.match(
+    css,
+    /\.mascot\.is-hidden \.mascot-body \{[\s\S]{0,120}pointer-events: none/,
+    '收起时她本人不该再接点击',
+  );
+  const handle = /\.mascot-handle \{([^}]*)\}/.exec(css);
+  assert.ok(handle, '应有 .mascot-handle 规则');
+  const w = Number(/width:\s*(\d+)px/.exec(handle[1])?.[1] ?? 999);
+  assert.ok(w <= 60, `把手的宽度要小（现在 ${w}px），否则还是会压住导航`);
+});
+
 test('S27 · 收起状态下拖出去再松手要回到 hide，不是展开成挥手', () => {
   const mascot = read('public/js/mascot.js');
   assert.match(
