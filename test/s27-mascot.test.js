@@ -19,6 +19,18 @@ const read = (rel) => fs.readFileSync(path.join(PROJECT_ROOT, rel), 'utf8');
 
 const ASSETS = ['wave.png', 'struggle.png', 'idle.png', 'point.png'];
 
+test('S27 · 拖动后的"忽略本次点击"标记必须会自己过期', () => {
+  // 它靠"下一次 click 到来时消费掉"来清除；可拖到别处松手时那次 click 不会发，
+  // 标记就会一直挂着，把用户后面第一次真正的单击吃掉——表现为"单击没反应"。
+  const mascot = read('public/js/mascot.js');
+  assert.match(mascot, /justDragged = true;/, '拖动结束要挂上忽略标记');
+  assert.match(
+    mascot,
+    /justDragged = true;[\s\S]{0,260}setTimeout\(\(\) => \{\s*justDragged = false;\s*\}, 400\)/,
+    '忽略标记必须自动过期（400ms），不能只等下一次 click 来消费',
+  );
+});
+
 test('S27 · 气泡点一下钉住，再点一下才收回（鼠标移开不消失）', () => {
   const mascot = read('public/js/mascot.js');
   assert.match(mascot, /let pinned = false/, '要有"钉住"这个状态');

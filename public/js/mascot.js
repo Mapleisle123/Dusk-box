@@ -164,7 +164,13 @@ function onPointerUp(e) {
 
   if (!wasDrag) return; // 单击交给 click 处理，别在这里重复触发
 
-  justDragged = true; // 紧接着的那次 click 要忽略
+  // 紧接着的那次 click 要忽略（浏览器在拖动结束后会补发一次）。
+  // 但拖到别处松手时那次 click 可能根本不发，所以给它一个 400ms 的自动过期——
+  // 否则标记一直挂着，会把用户后面第一次真正的单击吃掉（表现为"单击没反应"）。
+  justDragged = true;
+  setTimeout(() => {
+    justDragged = false;
+  }, 400);
 
   // 松手：记下她在哪，删掉拖动态（她立刻回到左下角原位），再用位移把这一跳补成动画
   const flying = els.body.getBoundingClientRect();
