@@ -47,6 +47,18 @@ test('S27 · 收起时只有小把手接点击，别压住侧栏的导航项', (
     /\.mascot\.is-hidden \.mascot-body \{[\s\S]{0,120}pointer-events: none/,
     '收起时她本人不该再接点击',
   );
+  // 光让图片不吃点击不够：外壳（.mascot）是 196×392，它会把相册、设置那一带的
+  // 点击整个吞掉，表现为"导航点不动"。
+  assert.match(
+    css,
+    /\.mascot\.is-hidden \{\s*pointer-events: none;\s*\}/,
+    '收起时整块外壳都不该接点击，只有小把手例外',
+  );
+  assert.match(
+    css,
+    /\.mascot\.is-hidden \.mascot-handle \{ display: block; pointer-events: auto; \}/,
+    '小把手要单独把点击收回来',
+  );
   const handle = /\.mascot-handle \{([^}]*)\}/.exec(css);
   assert.ok(handle, '应有 .mascot-handle 规则');
   const w = Number(/width:\s*(\d+)px/.exec(handle[1])?.[1] ?? 999);

@@ -1860,9 +1860,15 @@ html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }
 /* 收起：整张往左挪，只留右侧那一条（她的手 + 半个脑袋）。
    露多少由 --mascot-shift 控制（mascot.js 里的 HIDDEN_SHIFT），
    鼠标移上去会再多露 4%，点一下就展开。 */
+/* 收起时整块都不吃点击：只让里面那个小把手接。
+   她外壳是 196×392，光把图片设成 pointer-events:none 还不够——
+   外壳自己会把覆盖区域（相册、设置那一带）的点击全部吞掉。 */
+.mascot.is-hidden {
+  pointer-events: none;
+}
+
 .mascot.is-hidden .mascot-body {
   transform: translateX(var(--mascot-shift, -72%));
-  /* 收起时她本人不接点击，改用下面那个小把手 */
   pointer-events: none;
 }
 
@@ -1883,7 +1889,7 @@ html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }
   z-index: 61;
 }
 
-.mascot.is-hidden .mascot-handle { display: block; }
+.mascot.is-hidden .mascot-handle { display: block; pointer-events: auto; }
 
 /* 气泡在她右边：手指朝右，话接在手指的方向上 */
 .mascot-bubble {
