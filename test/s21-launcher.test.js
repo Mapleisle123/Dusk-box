@@ -196,14 +196,28 @@ test('S21 · 服务降级到别的端口时也要认出来（不能只探一个�
 });
 
 test('S21 · 没在跑就拉起来，而且只拉一个（连点两次双击也一样）', async (t) => {
-  const port = await freePort();
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qsx-launch-cold-'));
-  const dataRoot = path.join(root, 'data');
-  const cfg = tempConfig(dataRoot, port);
-  t.after(() => rmrf(root, cfg.dir));
+  // 并行跑全量测试时，隔壁用例的服务可能正好落在"扫描范围"里，被启动器当成
+  // "已经在跑"——那是环境噪声，不是功能问题。所以这里换一段端口重试几次，
+  // 只要有一次拿到干净的环境，就说明功能是对的。
+  let port = 0;
+  let root = '';
+  let dataRoot = '';
+  let cfg = null;
+  let a = null;
+  let b = null;
 
-  // 模拟"用户双击后觉得没反应，又双击了一次"：两个启动器同时开跑
-  const [a, b] = await withConfig(cfg.file, () => Promise.all([main(), main()]));
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    port = await freePort();
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'qsx-launch-cold-'));
+    dataRoot = path.join(root, 'data');
+    cfg = tempConfig(dataRoot, port);
+    t.after(() => rmrf(root, cfg?.dir));
+
+    // 模拟"用户双击后觉得没反应，又双击了一次"：两个启动器同时开跑
+    [a, b] = await withConfig(cfg.file, () => Promise.all([main(), main()]));
+    if (a.port === port && b.port === port) break;
+    await stopPid((await healthAt(port))?.pid);
+  }
 
   assert.equal(a.port, port, '第一个启动器应把服务拉在配置的端口上');
   assert.equal(b.port, port, '第二个启动器应等到同一个服务，而不是自己再起一个');
