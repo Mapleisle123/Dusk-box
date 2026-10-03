@@ -40,19 +40,10 @@ test('S27 · 收起状态下拖出去再松手要回到 hide，不是展开成�
   );
 });
 
-test('S27 · 悬停要有停留判定，鼠标扫过去不该切图', () => {
+test('S27 · 悬停不许有任何效果（只要单击 / 双击 / 长按拖拽）', () => {
   const mascot = read('public/js/mascot.js');
-  assert.match(mascot, /let hoverTimer = 0/, '悬停要有计时器');
-  assert.match(
-    mascot,
-    /hoverTimer = setTimeout\(\(\) => \{[\s\S]{0,120}pointAndSay\(0\)/,
-    '悬停要停住一小会才切换成 point',
-  );
-  assert.match(
-    mascot,
-    /addEventListener\('pointerleave'[\s\S]{0,80}clearTimeout\(hoverTimer\)/,
-    '移开时要取消这次悬停判定',
-  );
+  assert.doesNotMatch(mascot, /addEventListener\('pointerenter'/, '不该监听鼠标移入');
+  assert.doesNotMatch(mascot, /addEventListener\('pointerleave'/, '不该监听鼠标移出');
 });
 
 test('S27 · 飞回原位途中保持挣扎图，落位后再变挥手；收起要立刻结束飞行', () => {
@@ -107,11 +98,8 @@ test('S27 · 气泡点一下钉住，再点一下才收回（鼠标移开不消�
   const mascot = read('public/js/mascot.js');
   assert.match(mascot, /let pinned = false/, '要有"钉住"这个状态');
   assert.match(mascot, /if \(pinned\) \{[\s\S]{0,140}hideBubble\(\)/, '再点一下要收回气泡');
-  assert.match(
-    mascot,
-    /pointerleave'[\s\S]{0,80}if \(!pinned\) hideBubble\(\)/,
-    '鼠标移开时，钉住的气泡不能消失',
-  );
+  // 悬停已经不做了（没有 pointerleave 监听），气泡自然"鼠标移开也不消失"
+  assert.doesNotMatch(mascot, /addEventListener\('pointerleave'/, '不该有鼠标移出的处理');
   assert.match(
     mascot,
     /if \(!hidden && !pinned\) showState\('idle'\)/,

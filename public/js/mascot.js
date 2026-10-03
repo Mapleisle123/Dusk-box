@@ -47,8 +47,6 @@ let pinned = false;
 let timers = { idle: 0, bubble: 0 };
 /** 飞回原位的动画计时（回到位了才换回挥手图） */
 let flyTimer = 0;
-/** 悬停要"停住"才算数：鼠标只是扫过去不该切图 */
-let hoverTimer = 0;
 
 export function mascotEnabled() {
   return store.settings?.mascot !== 'false';
@@ -276,16 +274,7 @@ export function mountMascot() {
     pinned = false;
     setHidden(true); // 双击 = 收起
   });
-  els.body.addEventListener('pointerenter', () => {
-    clearTimeout(hoverTimer);
-    hoverTimer = setTimeout(() => {
-      if (!hidden && !justDragged && !pinned) pointAndSay(0);
-    }, 140);
-  });
-  els.body.addEventListener('pointerleave', () => {
-    clearTimeout(hoverTimer);
-    if (!pinned) hideBubble(); // 钉住的不收
-  });
+  // 悬停不做任何反应：用户明确只要"单击 / 双击 / 长按拖拽"三个动作。
 
   restartIdleTimer();
 }
