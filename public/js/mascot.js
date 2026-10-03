@@ -1,21 +1,23 @@
 /**
- * 侧栏里的吉祥物「祀」——**纯静态图**版本。
+ * 左下角的吉祥物「祀」——纯静态图。
  *
- * 四张图（都放在 img/mascot/，都是带透明通道的 PNG）：
- *   wave     挥手：进入/切换页面时
- *   struggle 挣扎：按住拖动时
+ * 五张透明 PNG（img/mascot/）：
+ *   wave     挥手：打开页面 / 每次切页 / 拖完松手回到这张
+ *   struggle 挣扎：按住拖动时，可以拖到页面任何地方
  *   idle     待机：10 秒没有任何操作
- *   point    手指朝右：鼠标悬停或点击时，右边冒一个气泡说当前页面该干什么
+ *   point    手指朝右：悬停或单击时，右边冒气泡说这一页该做什么
+ *   hide     收起：双击之后换成这张，只露右侧一条（手 + 半个脑袋）
  *
- * 规矩：
- *   - 她**不遮挡任何能点的东西**：住在侧栏自己那格里，容器本身不吃鼠标事件，
- *     只有她本人接鼠标；
- *   - 松手一定飞回侧栏原位，然后回到挥手图、重新开始 10 秒计时；
- *   - 气泡的话术**每个页面不一样**（见 PAGE_LINES），她指哪儿就是在提醒去哪儿。
+ * 三条硬约束（都是踩过坑换来的）：
+ *   1. 她**必须挂在 <body> 下**，不能放进侧栏：侧栏带 backdrop-filter，
+ *      会把她当成自己的子层并裁掉，于是拖不出侧栏；
+ *   2. 拖动过程中**绝对不要搬动 DOM**：一旦 appendChild 换父节点，
+ *      浏览器会释放指针捕获，后面的移动/松手事件全收不到——拖动直接卡死；
+ *   3. 换图用**两张图交叉淡入**，直接改 src 是硬切。
  */
 
-import { assetUrl } from './api.js';
 import { store } from './store.js';
+import { assetUrl } from './api.js';
 import { DRAG_THRESHOLD_PX, IDLE_AFTER_MS, mascotLineFor } from './mascot-rules.js';
 
 const IMG = {
@@ -26,36 +28,25 @@ const IMG = {
   hide: assetUrl('mascot/hide.png'),
 };
 
-/** 收起时往左挪多少：留出右侧这一条（手 + 半个脑袋）。露多了/露少了就改这个数。 */
-const HIDDEN_SHIFT = '-72%';
+/** 收起时往左挪多少：留出右侧那一条。露多了/露少了只改这一个数。 */
+const HIDDEN_SHIFT = '-58%';
 
-let els = null; // { wrap, body, img, bubble }
-let layers = null; // 两张叠在一起的图：[当前显示的, 备用的]
+let els = null; // { wrap, body, bubble }
+let layers = null; // 两张叠着的图：[当前显示, 备用]
 let shown = 0;
 let state = 'wave';
 let hidden = false;
 let drag = null;
 let timers = { idle: 0, bubble: 0 };
-let bound = false;
 
 export function mascotEnabled() {
   return store.settings?.mascot !== 'false';
 }
 
-function clearIdleTimer() {
-  clearTimeout(timers.idle);
-}
-
-/**
- * 换一张状态图。
- *
- * 用**两张叠在一起的图做交叉淡入**：把待换的那张先放到底层、淡入，
- * 同时把原来那张淡出。直接改 src 是硬切，一闪很生硬。
- */
+/** 换图：新图淡入、旧图淡出（两张图叠在同一位置接力） */
 function showState(name, force = false) {
   if (!els || (state === name && !force)) return;
   state = name;
-  els.body.classList.toggle('is-pointing', name === 'point');
   const nextIndex = shown === 0 ? 1 : 0;
   const next = layers[nextIndex];
   const prev = layers[shown];
@@ -65,26 +56,12 @@ function showState(name, force = false) {
   shown = nextIndex;
 }
 
-/** 收起 / 展开：收起时换成 hide 图，只露出右边那一条 */
-function setHidden(value) {
-  if (!els) return;
-  hidden = value;
-  els.wrap.classList.toggle('is-hidden', value);
-  els.wrap.style.setProperty('--mascot-shift', HIDDEN_SHIFT);
-  if (value) {
-    clearIdleTimer();
-    hideBubble();
-    showState('hide', true);
-  } else {
-    showState('wave', true);
-    restartIdleTimer();
-  }
-}
-
-/** 10 秒没人理她 → 待机；任何操作都会把计时清零 */
+/** 10 秒没人管她就待机；任何操作都会把计时清零 */
 function restartIdleTimer() {
-  clearIdleTimer();
-  timers.idle = setTimeout(() => showState('idle'), IDLE_AFTER_MS);
+  clearTimeout(timers.idle);
+  timers.idle = setTimeout(() => {
+    if (!hidden) showState('idle');
+  }, IDLE_AFTER_MS);
 }
 
 function hideBubble() {
@@ -92,15 +69,14 @@ function hideBubble() {
   clearTimeout(timers.bubble);
   els.bubble.classList.remove('show');
   els.bubble.hidden = true;
-  if (state === 'point') showState('wave');
 }
 
-/** 她指右边 + 右边冒一句"该干什么" */
+/** 她指向右边 + 冒一句"这一页该干什么" */
 function pointAndSay(ms = 4200) {
-  if (!els) return;
+  if (!els || hidden) return;
   const line = mascotLineFor(window.location.hash);
   if (!line) return;
-  clearIdleTimer();
+  clearTimeout(timers.idle);
   showState('point');
   els.bubble.textContent = line;
   els.bubble.hidden = false;
@@ -108,10 +84,28 @@ function pointAndSay(ms = 4200) {
   void els.bubble.offsetWidth;
   els.bubble.classList.add('show');
   clearTimeout(timers.bubble);
-  timers.bubble = setTimeout(hideBubble, ms);
+  timers.bubble = setTimeout(() => {
+    hideBubble();
+    if (!hidden) {
+      showState('wave');
+      restartIdleTimer();
+    }
+  }, ms);
 }
 
-// ---- 拖动 ----------------------------------------------------------------
+/** 收起 / 展开 */
+function setHidden(value) {
+  if (!els) return;
+  hidden = value;
+  els.wrap.classList.toggle('is-hidden', value);
+  els.wrap.style.setProperty('--mascot-shift', HIDDEN_SHIFT);
+  hideBubble();
+  clearTimeout(timers.idle);
+  showState(value ? 'hide' : 'wave', true);
+  if (!value) restartIdleTimer();
+}
+
+// ---- 拖动（全程不搬 DOM）------------------------------------------------
 
 function onPointerDown(e) {
   if (!els || e.button !== 0) return;
@@ -119,16 +113,17 @@ function onPointerDown(e) {
   try {
     els.body.setPointerCapture(e.pointerId);
   } catch {
-    /* 不支持指针捕获时退化成普通事件 */
+    /* 个别环境不支持指针捕获，退化成普通事件也能用 */
   }
 }
 
 function onPointerMove(e) {
   if (!els || !drag || e.pointerId !== drag.id) return;
+
   if (!drag.moved) {
     if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) <= DRAG_THRESHOLD_PX) return;
     drag.moved = true;
-    clearIdleTimer();
+    clearTimeout(timers.idle);
     hideBubble();
     const rect = els.body.getBoundingClientRect();
     drag.dx = drag.sx - rect.left;
@@ -137,13 +132,10 @@ function onPointerMove(e) {
     els.body.style.height = `${rect.height}px`;
     els.body.style.left = `${rect.left}px`;
     els.body.style.top = `${rect.top}px`;
-    els.body.classList.add('is-dragging');
-    // 关键一步：把她挪到 <body> 底下再拖。
-    // 侧栏带着 backdrop-filter，自成一层"层叠上下文"，里面的 z-index 再高
-    // 也压不过外面的主内容区——不搬出去，拖到右侧就会被页面盖住。
-    document.body.appendChild(els.body);
+    els.body.classList.add('is-dragging'); // 她在 body 下，天然浮在整页最上层
     showState('struggle');
   }
+
   const rect = els.body.getBoundingClientRect();
   const m = 4;
   els.body.style.left = `${Math.min(Math.max(e.clientX - drag.dx, m), window.innerWidth - rect.width - m)}px`;
@@ -160,15 +152,11 @@ function onPointerUp(e) {
     /* 没捕获成功就不用释放 */
   }
 
-  if (!wasDrag) {
-    setHidden(!hidden); // 点一下收起；再点露出来的那一条就展开
-    return;
-  }
+  if (!wasDrag) return; // 单击交给 click 处理，别在这里重复触发
 
-  // 松手：记下她在哪，删掉拖动态让她瞬间回位，再用一段位移把这一跳补成动画
+  // 松手：记下她在哪，删掉拖动态（她立刻回到左下角原位），再用位移把这一跳补成动画
   const flying = els.body.getBoundingClientRect();
   els.body.classList.remove('is-dragging');
-  els.wrap.appendChild(els.body); // 放回侧栏那一格，她照旧住在那儿
   els.body.style.left = '';
   els.body.style.top = '';
   els.body.style.width = '';
@@ -188,17 +176,9 @@ function onPointerUp(e) {
 
 // ---- 挂载 / 卸载 ---------------------------------------------------------
 
+/** 挂到 <body> 下（不能放侧栏里，理由见文件头） */
 export function mountMascot() {
-  if (bound === false) {
-    bound = true;
-    window.addEventListener('duskbox:published', () => {
-      if (mascotEnabled()) pointAndSay();
-    });
-  }
   if (!mascotEnabled() || els) return;
-
-  const slot = document.getElementById('mascot-slot');
-  if (!slot) return;
 
   const wrap = document.createElement('div');
   wrap.className = 'mascot';
@@ -208,7 +188,7 @@ export function mountMascot() {
       <img class="mascot-img" alt="" decoding="async">
       <span class="mascot-bubble" hidden></span>
     </button>`;
-  slot.appendChild(wrap);
+  document.body.appendChild(wrap);
 
   els = {
     wrap,
@@ -218,6 +198,7 @@ export function mountMascot() {
   layers = [...wrap.querySelectorAll('.mascot-img')];
   shown = 0;
   state = 'wave';
+  hidden = false;
 
   // 图不在（素材没放好）：整块收起，绝不留破图
   for (const layer of layers) {
@@ -228,19 +209,29 @@ export function mountMascot() {
   els.body.addEventListener('pointermove', onPointerMove);
   els.body.addEventListener('pointerup', onPointerUp);
   els.body.addEventListener('pointercancel', onPointerUp);
-  els.body.addEventListener('click', (e) => e.preventDefault());
-  els.body.addEventListener('pointerenter', () => pointAndSay(0));
+  els.body.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (hidden) setHidden(false); // 点露出来的那一条 = 展开
+    else pointAndSay();
+  });
+  els.body.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    setHidden(true); // 双击 = 收起
+  });
+  els.body.addEventListener('pointerenter', () => {
+    if (!hidden) pointAndSay(0);
+  });
   els.body.addEventListener('pointerleave', hideBubble);
-  els.body.addEventListener('focus', () => pointAndSay(0));
-  els.body.addEventListener('blur', hideBubble);
 
   restartIdleTimer();
 }
 
 export function unmountMascot() {
-  clearIdleTimer();
+  clearTimeout(timers.idle);
   clearTimeout(timers.bubble);
   drag = null;
+  layers = null;
+  shown = 0;
   if (els) els.wrap.remove();
   els = null;
 }
@@ -250,9 +241,9 @@ export function refreshMascot() {
   else unmountMascot();
 }
 
-/** 每次切页：换成挥手图，并重新开始 10 秒计时 */
+/** 切页：挥手 + 重新计时（收起状态下保持收起） */
 export function mascotOnRouteChange() {
-  if (!els) return;
+  if (!els || hidden) return;
   hideBubble();
   showState('wave');
   restartIdleTimer();

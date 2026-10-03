@@ -1786,7 +1786,8 @@ html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }
   /* 浮在侧栏上方、贴左下角 */
   position: fixed;
   left: 8px;
-  bottom: 14px;
+  /* 抬到服务状态灯上面，别挡着"服务运行中"那个小圆点 */
+  bottom: 64px;
   z-index: 60;
   /* 必须给一个明确宽度：她是 fixed + shrink-to-fit，而里面的图全是绝对定位、
      撑不出宽度，不给宽度的话整块会塌成 0×0（DOM 在、图也在，就是看不见）。 */

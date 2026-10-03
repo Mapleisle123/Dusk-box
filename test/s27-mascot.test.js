@@ -40,12 +40,18 @@ test('S27 · 四张素材都在，且是带透明通道的 PNG', async (t) => {
 
 test('S27 · 拖动时她必须搬到 body 下（否则被主内容区盖住）', () => {
   const mascot = read('public/js/mascot.js');
+  // 她一开始就挂在 <body> 下（挂侧栏里会被 backdrop-filter 裁掉、拖不出去）
   assert.match(
     mascot,
-    /document\.body\.appendChild\(els\.body\)/,
-    '拖动开始时要把她挪到 body 底下，脱离侧栏的层叠上下文',
+    /document\.body\.appendChild\(wrap\)/,
+    '她应该挂在 <body> 下，不能放进侧栏',
   );
-  assert.match(mascot, /els\.wrap\.appendChild\(els\.body\)/, '松手要放回侧栏那一格');
+  // 而拖动过程中**不许**再搬 DOM：appendChild 换父节点会释放指针捕获，拖动会卡死
+  assert.doesNotMatch(
+    mascot,
+    /appendChild\(els\.body\)/,
+    '拖动中不许搬动 DOM（会释放指针捕获，表现为一拖就卡死）',
+  );
 
   const css = read('public/css/app.css');
   assert.match(
