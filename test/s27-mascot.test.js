@@ -19,11 +19,31 @@ const read = (rel) => fs.readFileSync(path.join(PROJECT_ROOT, rel), 'utf8');
 
 const ASSETS = ['wave.png', 'struggle.png', 'idle.png', 'point.png'];
 
+test('S27 · 气泡点一下钉住，再点一下才收回（鼠标移开不消失）', () => {
+  const mascot = read('public/js/mascot.js');
+  assert.match(mascot, /let pinned = false/, '要有"钉住"这个状态');
+  assert.match(mascot, /if \(pinned\) \{[\s\S]{0,140}hideBubble\(\)/, '再点一下要收回气泡');
+  assert.match(
+    mascot,
+    /pointerleave'[\s\S]{0,80}if \(!pinned\) hideBubble\(\)/,
+    '鼠标移开时，钉住的气泡不能消失',
+  );
+  assert.match(
+    mascot,
+    /if \(!hidden && !pinned\) showState\('idle'\)/,
+    '钉住气泡时不要偷偷切成待机图',
+  );
+});
+
 test('S27 · 双击不能被拆成"先 point 再 hide"', () => {
   // 浏览器双击的顺序是 click、click、dblclick。单击若立刻动作，
   // 用户就会看到 point 闪一下再收起。所以单击必须延迟，并在 dblclick 里取消。
   const mascot = read('public/js/mascot.js');
-  assert.match(mascot, /clickTimer = setTimeout\(\(\) => pointAndSay\(\)/, '单击要延迟再动作');
+  assert.match(
+    mascot,
+    /clickTimer = setTimeout\(\(\) => \{[\s\S]{0,90}pointAndSay\(0\)/,
+    '单击要延迟再动作（延迟期间可以被双击取消）',
+  );
   assert.match(
     mascot,
     /addEventListener\('dblclick'[\s\S]{0,220}clearTimeout\(clickTimer\)/,

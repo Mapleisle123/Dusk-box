@@ -43,6 +43,8 @@ let justDragged = false;
 /** 单击要等一小会儿再动作：浏览器双击时会先发两次 click 再发 dblclick，
    不等待的话就变成"先冒 point、再收起"，看着像两个动作连着触发。 */
 let clickTimer = 0;
+/** 气泡被"钉住"了：点一下钉住（怎么动鼠标都不消失），再点一下才收回 */
+let pinned = false;
 let timers = { idle: 0, bubble: 0 };
 
 export function mascotEnabled() {
@@ -66,7 +68,7 @@ function showState(name, force = false) {
 function restartIdleTimer() {
   clearTimeout(timers.idle);
   timers.idle = setTimeout(() => {
-    if (!hidden) showState('idle');
+    if (!hidden && !pinned) showState('idle');
   }, IDLE_AFTER_MS);
 }
 
@@ -107,6 +109,7 @@ function setHidden(value) {
   els.wrap.style.setProperty('--mascot-shift', HIDDEN_SHIFT);
   hideBubble();
   clearTimeout(timers.idle);
+  pinned = false;
   showState(value ? 'hide' : 'wave', true);
   if (!value) restartIdleTimer();
 }
@@ -131,6 +134,7 @@ function onPointerMove(e) {
     drag.moved = true;
     clearTimeout(timers.idle);
     hideBubble();
+    pinned = false;
     const rect = els.body.getBoundingClientRect();
     drag.dx = drag.sx - rect.left;
     drag.dy = drag.sy - rect.top;
@@ -227,18 +231,32 @@ export function mountMascot() {
       setHidden(false); // 收起时点露出来的那一条 = 立即展开
       return;
     }
+    // 已经钉住了：再点一下就收回、回到挥手图
+    if (pinned) {
+      pinned = false;
+      hideBubble();
+      showState('wave');
+      restartIdleTimer();
+      return;
+    }
     clearTimeout(clickTimer);
-    clickTimer = setTimeout(() => pointAndSay(), 260); // 等一等，看是不是双击
+    clickTimer = setTimeout(() => {
+      pinned = true; // 钉住：鼠标移开也不消失
+      pointAndSay(0);
+    }, 260); // 等一等，看是不是双击
   });
   els.body.addEventListener('dblclick', (e) => {
     e.preventDefault();
     clearTimeout(clickTimer); // 是双击：把刚才那次单击的动作取消掉
+    pinned = false;
     setHidden(true); // 双击 = 收起
   });
   els.body.addEventListener('pointerenter', () => {
     if (!hidden && !justDragged) pointAndSay(0);
   });
-  els.body.addEventListener('pointerleave', hideBubble);
+  els.body.addEventListener('pointerleave', () => {
+    if (!pinned) hideBubble(); // 钉住的不收
+  });
 
   restartIdleTimer();
 }
