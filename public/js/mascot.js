@@ -23,12 +23,17 @@ const IMG = {
   struggle: assetUrl('mascot/struggle.png'),
   idle: assetUrl('mascot/idle.png'),
   point: assetUrl('mascot/point.png'),
+  hide: assetUrl('mascot/hide.png'),
 };
+
+/** 收起时往左挪多少：留出右侧这一条（手 + 半个脑袋）。露多了/露少了就改这个数。 */
+const HIDDEN_SHIFT = '-72%';
 
 let els = null; // { wrap, body, img, bubble }
 let layers = null; // 两张叠在一起的图：[当前显示的, 备用的]
 let shown = 0;
 let state = 'wave';
+let hidden = false;
 let drag = null;
 let timers = { idle: 0, bubble: 0 };
 let bound = false;
@@ -47,8 +52,8 @@ function clearIdleTimer() {
  * 用**两张叠在一起的图做交叉淡入**：把待换的那张先放到底层、淡入，
  * 同时把原来那张淡出。直接改 src 是硬切，一闪很生硬。
  */
-function showState(name) {
-  if (!els || state === name) return;
+function showState(name, force = false) {
+  if (!els || (state === name && !force)) return;
   state = name;
   els.body.classList.toggle('is-pointing', name === 'point');
   const nextIndex = shown === 0 ? 1 : 0;
@@ -58,6 +63,22 @@ function showState(name) {
   next.classList.add('show');
   prev.classList.remove('show');
   shown = nextIndex;
+}
+
+/** 收起 / 展开：收起时换成 hide 图，只露出右边那一条 */
+function setHidden(value) {
+  if (!els) return;
+  hidden = value;
+  els.wrap.classList.toggle('is-hidden', value);
+  els.wrap.style.setProperty('--mascot-shift', HIDDEN_SHIFT);
+  if (value) {
+    clearIdleTimer();
+    hideBubble();
+    showState('hide', true);
+  } else {
+    showState('wave', true);
+    restartIdleTimer();
+  }
 }
 
 /** 10 秒没人理她 → 待机；任何操作都会把计时清零 */
@@ -140,7 +161,7 @@ function onPointerUp(e) {
   }
 
   if (!wasDrag) {
-    pointAndSay(); // 点一下：她指向右边，说这一页该干什么
+    setHidden(!hidden); // 点一下收起；再点露出来的那一条就展开
     return;
   }
 
