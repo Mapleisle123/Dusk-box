@@ -242,11 +242,11 @@ export async function pageProjects() {
   return {
     html,
     mount(root) {
-      body.querySelectorAll('[data-project-new]').forEach((btn) => {
+      root.querySelectorAll('[data-project-new]').forEach((btn) => {
         btn.addEventListener('click', () => openProjectEditor(null));
       });
 
-      body.querySelectorAll('[data-project-edit]').forEach((btn) => {
+      root.querySelectorAll('[data-project-edit]').forEach((btn) => {
         btn.addEventListener('click', async () => {
           try {
             const project = await api.getProject(btn.dataset.projectEdit);
@@ -257,11 +257,11 @@ export async function pageProjects() {
         });
       });
 
-      body.querySelectorAll('[data-project-done]').forEach((btn) => {
+      root.querySelectorAll('[data-project-done]').forEach((btn) => {
         btn.addEventListener('click', () => setStatus(btn.dataset.projectDone, 'done'));
       });
 
-      body.querySelectorAll('[data-project-del]').forEach((btn) => {
+      root.querySelectorAll('[data-project-del]').forEach((btn) => {
         btn.addEventListener('click', async () => {
           const yes = await confirmDialog({
             title: '删除这个项目？',
@@ -281,7 +281,7 @@ export async function pageProjects() {
       });
 
       // 拖动进度条松手即保存（用 change 而不是 input：拖动过程中不打扰服务端）
-      body.querySelectorAll('[data-project-range]').forEach((range) => {
+      root.querySelectorAll('[data-project-range]').forEach((range) => {
         range.addEventListener('change', async () => {
           const card = range.closest('[data-project]');
           const id = card?.dataset.project;

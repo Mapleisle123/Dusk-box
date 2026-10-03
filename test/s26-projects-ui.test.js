@@ -119,3 +119,20 @@ test('S26 · 弹窗回调只能用 openModal 真正给出的字段（用错会�
     }
   }
 });
+
+test('S26 · 页面 mount 用 root、弹窗 onMount 用 body（两者搞反=点了没反应）', () => {
+  const src = read('public/js/pages/projects.js');
+  const mountAt = src.indexOf('  return {\n    html,');
+  assert.ok(mountAt > 0, '项目页应导出 { html, mount }');
+  const mountPart = src.slice(mountAt);
+  assert.doesNotMatch(
+    mountPart,
+    /body\.querySelector/,
+    'mount(root) 里没有 body 这个变量，写成 body 会直接抛错——按钮全部失灵',
+  );
+  assert.match(mountPart, /root\.querySelectorAll\('\[data-project-new\]'\)/, '新建按钮应绑在 root 上');
+
+  const editorPart = src.slice(0, mountAt);
+  assert.match(editorPart, /onMount: \(\{ body, foot, close \}\)/, '弹窗回调应取 body');
+  assert.match(editorPart, /body\.querySelectorAll\('\[data-media-del\]'\)/, '弹窗里的元素要用 body 找');
+});
