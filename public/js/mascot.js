@@ -47,6 +47,8 @@ let pinned = false;
 let timers = { idle: 0, bubble: 0 };
 /** 飞回原位的动画计时（回到位了才换回挥手图） */
 let flyTimer = 0;
+/** 悬停要"停住"才算数：鼠标只是扫过去不该切图 */
+let hoverTimer = 0;
 
 export function mascotEnabled() {
   return store.settings?.mascot !== 'false';
@@ -198,9 +200,10 @@ function onPointerUp(e) {
   // 动作才连得上；一松手就变挥手的话，你会看见一张挥手图从页面中间飘回去。
   clearTimeout(flyTimer);
   flyTimer = setTimeout(() => {
-    if (!hidden && state === 'struggle') {
-      showState('wave');
-      restartIdleTimer();
+    if (state === 'struggle') {
+      // 收起状态下拖出去再松手，要回到"收起"那张，而不是展开成挥手
+      showState(hidden ? 'hide' : 'wave');
+      if (!hidden) restartIdleTimer();
     }
   }, 400);
 }
@@ -274,9 +277,13 @@ export function mountMascot() {
     setHidden(true); // 双击 = 收起
   });
   els.body.addEventListener('pointerenter', () => {
-    if (!hidden && !justDragged) pointAndSay(0);
+    clearTimeout(hoverTimer);
+    hoverTimer = setTimeout(() => {
+      if (!hidden && !justDragged && !pinned) pointAndSay(0);
+    }, 140);
   });
   els.body.addEventListener('pointerleave', () => {
+    clearTimeout(hoverTimer);
     if (!pinned) hideBubble(); // 钉住的不收
   });
 

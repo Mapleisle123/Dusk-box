@@ -31,6 +31,30 @@ test('S27 · 五张图要预热、双击判定别拖太长（否则单击显得�
   );
 });
 
+test('S27 · 收起状态下拖出去再松手要回到 hide，不是展开成挥手', () => {
+  const mascot = read('public/js/mascot.js');
+  assert.match(
+    mascot,
+    /showState\(hidden \? 'hide' : 'wave'\)/,
+    '松手后的收尾要按"有没有收起"决定回到哪张图',
+  );
+});
+
+test('S27 · 悬停要有停留判定，鼠标扫过去不该切图', () => {
+  const mascot = read('public/js/mascot.js');
+  assert.match(mascot, /let hoverTimer = 0/, '悬停要有计时器');
+  assert.match(
+    mascot,
+    /hoverTimer = setTimeout\(\(\) => \{[\s\S]{0,120}pointAndSay\(0\)/,
+    '悬停要停住一小会才切换成 point',
+  );
+  assert.match(
+    mascot,
+    /addEventListener\('pointerleave'[\s\S]{0,80}clearTimeout\(hoverTimer\)/,
+    '移开时要取消这次悬停判定',
+  );
+});
+
 test('S27 · 飞回原位途中保持挣扎图，落位后再变挥手；收起要立刻结束飞行', () => {
   // 踩过：一松手就换成挥手图 → 你会看到"挥手图从页面中间飘回家"，
   // 而这时若立刻双击收起，露出来的那一条也悬在半路，看着跟上一次一样。
@@ -38,8 +62,8 @@ test('S27 · 飞回原位途中保持挣扎图，落位后再变挥手；收起�
   assert.match(mascot, /let flyTimer = 0/, '要有飞回动画的计时');
   assert.match(
     mascot,
-    /flyTimer = setTimeout\(\(\) => \{[\s\S]{0,120}state === 'struggle'[\s\S]{0,80}showState\('wave'\)/,
-    '飞回途中保持挣扎，落位后再换挥手',
+    /flyTimer = setTimeout\(\(\) => \{[\s\S]{0,140}state === 'struggle'[\s\S]{0,120}showState\(hidden \? 'hide' : 'wave'\)/,
+    '飞回途中保持挣扎，落位后再按"有没有收起"换成 hide 或挥手',
   );
   assert.match(
     mascot,
