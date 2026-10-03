@@ -49,7 +49,6 @@ const EDITABLE = new Set([
   'backupTime',
   'backupKeep',
   'backgroundImage',
-  'mascot',
 ]);
 
 /** 允许的主题主色调 */
@@ -101,9 +100,6 @@ function validateSettingsPatch(patch, dataRoot) {
       throw badRequest(
         '背景图必须是可选列表里的图片文件名（自带的或你自己添加的；留空表示不使用）',
       );
-    }
-    if (key === 'mascot' && !['true', 'false'].includes(value)) {
-      throw badRequest('mascot 只能是 true 或 false');
     }
     out[key] = value;
   }

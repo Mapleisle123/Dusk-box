@@ -24,7 +24,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { PROJECT_ROOT } from '../server/config.js';
 import { LAUNCH_SCRIPT } from '../server/constants.js';
 import { main, findRunningPort, healthAt } from '../server/launch.js';
-import { occupyPortRange, startTestServer } from './helpers.js';
+import { startTestServer } from './helpers.js';
 
 /** 找一个空闲端口 */
 function freePort() {
@@ -196,15 +196,7 @@ test('S21 · 服务降级到别的端口时也要认出来（不能只探一个�
 });
 
 test('S21 · 没在跑就拉起来，而且只拉一个（连点两次双击也一样）', async (t) => {
-  // 把配置端口后面那 19 个端口占住（连上就断开）。
-  // 并行跑全量测试时，隔壁用例的服务也是茜色箱、也监听在附近的端口上，
-  // 启动器"扫一段端口看有没有在跑"就会先撞上它，于是根本不去拉自己的服务。
-  // 占住之后，这一段里不存在别人的实例，结论才是确定的。
-  const blockers = await occupyPortRange(20, 0);
-  assert.ok(blockers, '测试准备：应能占住一段连续端口');
-  t.after(() => blockers.child.kill());
-
-  const port = blockers.base;
+  const port = await freePort();
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qsx-launch-cold-'));
   const dataRoot = path.join(root, 'data');
   const cfg = tempConfig(dataRoot, port);
@@ -213,21 +205,15 @@ test('S21 · 没在跑就拉起来，而且只拉一个（连点两次双击也�
   // 模拟"用户双击后觉得没反应，又双击了一次"：两个启动器同时开跑
   const [a, b] = await withConfig(cfg.file, () => Promise.all([main(), main()]));
 
+  assert.equal(a.port, port, '第一个启动器应把服务拉在配置的端口上');
+  assert.equal(b.port, port, '第二个启动器应等到同一个服务，而不是自己再起一个');
   assert.equal(
     [a.started, b.started].filter(Boolean).length,
     1,
     '两次启动里只能有一次真的去拉服务',
   );
-  assert.equal(a.port, b.port, '两个启动器必须指向同一个实例，不能各拉一个');
-  // 端口本身允许往后挪（并行跑测试时，刚挑的空闲端口可能被隔壁用例抢走，
-  // 服务会自己往后退一格——那是 S9 专门测过的正常行为）。
-  // 这里真正要钉死的是"只有一个实例、用的是我们这份数据目录"。
-  assert.ok(
-    a.port >= port && a.port < port + 20,
-    `服务应落在配置端口起的一段范围内（配置 ${port}，实际 ${a.port}）`,
-  );
 
-  const health = await healthAt(a.port);
+  const health = await healthAt(port);
   t.after(() => stopPid(health.pid));
 
   assert.equal(health.ok, true, '冷启动后服务应能正常响应');
@@ -235,14 +221,8 @@ test('S21 · 没在跑就拉起来，而且只拉一个（连点两次双击也�
   assert.ok(Number.isInteger(health.pid), '健康检查应报告 pid');
   assert.notEqual(health.pid, process.pid, '服务必须是另一个进程，不能是本测试进程');
 
-  // 这一整段端口里，服务着**我们这份数据目录**的实例只能有一个
-  const instances = [];
-  for (let i = 0; i < 20; i += 1) {
-    const h = await healthAt(port + i);
-    if (h && h.dataRoot === dataRoot) instances.push({ port: port + i, pid: h.pid });
-  }
-  assert.equal(instances.length, 1, `同一份数据目录上出现了 ${instances.length} 个实例`);
-  assert.equal(instances[0].pid, health.pid, '连点两次不该换进程');
+  // 配置端口之后的一段端口里，只应该有这一个实例
+  assert.equal(await findRunningPort(port + 1), null, `端口 ${port + 1} 起不该再冒出第二个实例`);
 
   // 数据目录确实落在配置的位置（而不是用户真实的 data/）
   assert.ok(fs.existsSync(path.join(dataRoot, 'duskbox.db')), '数据库应建在配置的数据目录里');

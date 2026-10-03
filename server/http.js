@@ -43,7 +43,6 @@ const MIME = {
   '.md': 'text/markdown; charset=utf-8',
   '.woff2': 'font/woff2',
   '.mp4': 'video/mp4',
-  '.webm': 'video/webm',
 };
 
 /** 默认请求体上限（本地应用，允许较大图片） */

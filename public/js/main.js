@@ -6,7 +6,6 @@ import { api } from './api.js';
 import { store } from './store.js';
 import { currentRoute, onRouteChange, startRouter, navigate } from './router.js';
 import { esc, icons } from './ui.js';
-import { mascotOnRouteChange, mountMascot } from './mascot.js';
 
 import { pageHome } from './pages/home.js';
 import { pagePosts } from './pages/posts.js';
@@ -149,16 +148,10 @@ async function bootstrap() {
   }
 
   onRouteChange(render);
-  // 每次切换页面：先让吉祥物挥一次手（她第一次露面也挥，见 mountMascot）
-  onRouteChange(() => mascotOnRouteChange());
   startRouter();
 
   pollService();
   setInterval(pollService, 15000);
-
-  // 右侧的 Q 版吉祥物。放在最后挂：服务都连上了再出现，
-  // 免得还没连上就冒出来、又因为拿不到数据而显得莫名其妙。
-  mountMascot();
 }
 
 bootstrap();

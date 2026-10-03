@@ -385,8 +385,6 @@ function mountEditor(root, { post, mode }) {
           : await api.createPost(form);
       newFiles.forEach((f) => URL.revokeObjectURL(f.preview));
       toastSuccess(mode === 'edit' ? '已保存修改' : '已发布，文件已保存到电脑');
-      // 告诉页面右侧的吉祥物"刚记了一笔"（它只冒一次气泡，不打扰）
-      if (mode !== 'edit') window.dispatchEvent(new CustomEvent('duskbox:published'));
       navigate(mode === 'edit' ? `posts/${post.id}` : 'posts');
       void res;
     } catch (err) {

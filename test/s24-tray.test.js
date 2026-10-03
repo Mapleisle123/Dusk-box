@@ -15,13 +15,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
+import net from 'node:net';
 import { spawn, spawnSync } from 'node:child_process';
 import { PROJECT_ROOT } from '../server/config.js';
 import { healthAt, main, startTray, trayScriptPath } from '../server/launch.js';
-import { occupyPortRange, startTestServer } from './helpers.js';
+import { startTestServer } from './helpers.js';
 
 /** 托盘只在 Windows 上存在 */
 const onWindows = process.platform === 'win32';
@@ -87,19 +87,13 @@ test(
   'S24 · 单独的探针模式：能找到在跑的服务端口（含端口降级）',
   { skip: !onWindows ? '仅适用于 Windows' : false },
   async (t) => {
-    // 占住整段、只留中间一格给我们的服务：
-    // 这样"服务降级到下一个端口"这件事被测到了，又不会被并行跑着的隔壁实例插队
-    const range = await occupyPortRange(20, 1);
-    assert.ok(range, '测试准备：应能占住一段连续端口');
-    t.after(() => range.child.kill());
-
-    const port = range.base + 1;
+    const port = await freePort();
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qsx-tray-probe-'));
     const dataRoot = path.join(root, 'data');
     const runCfg = tempConfig(dataRoot, port);
     // 探针看到的配置里写小一号的端口，真实服务在 port 上：
     // 这正是"端口被占后自动后退"的现场，只探配置端口会误判成没在跑
-    const probeCfg = tempConfig(dataRoot, range.base);
+    const probeCfg = tempConfig(dataRoot, port - 1);
 
     // 起一个**真实的服务进程**，而不是测试进程内部的那个实例。
     // 托盘在真实场景下面向的永远是另一个进程，这样测才是照着实际的样子测
@@ -161,7 +155,7 @@ test(
     assert.equal(
       res.stdout.trim(),
       String(port),
-      `应报出真实在跑的那个端口（${port}），而不是配置里写的那个（${range.base}）`,
+      `应报出真实在跑的那个端口（${port}），而不是配置里写的那个（${port - 1}）`,
     );
   },
 );
@@ -170,13 +164,9 @@ test(
   'S24 · 服务没在跑时，探针报 0（不能乱指一个端口）',
   { skip: !onWindows ? '仅适用于 Windows' : false },
   async (t) => {
-    // 整段都占住：扫描范围内不可能出现"别人的茜色箱"，结论才是确定的
-    const range = await occupyPortRange(20);
-    assert.ok(range, '测试准备：应能占住一段连续端口');
-    t.after(() => range.child.kill());
-
+    const port = await freePort();
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qsx-tray-none-'));
-    const cfg = tempConfig(path.join(root, 'data'), range.base);
+    const cfg = tempConfig(path.join(root, 'data'), port);
     t.after(() => {
       fs.rmSync(root, { recursive: true, force: true });
       fs.rmSync(cfg.dir, { recursive: true, force: true });
