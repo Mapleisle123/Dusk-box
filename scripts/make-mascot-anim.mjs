@@ -102,6 +102,28 @@ const COLOR_TOL = 16;
 const MIN_BLOB_RATIO = 0.002;
 
 /**
+ * 「近白」判据。
+ *
+ * 原先用的是"和相邻像素色差不超过 16 才继续爬"，结果在待机那段翻车了：
+ * 它的背景是带一点水彩纹理的白（248~251），纹理会让色差忽大忽小，
+ * 爬到半路就断，于是**整块背景被当成了她**，她就缩成小小一个。
+ *
+ * 现在改成看"这个像素本身是不是近白"：够亮 + 颜色不偏（通道差很小）。
+ * 她的白裙子虽然也白，但被轮廓线包着，从四边爬不进去，所以是安全的。
+ */
+const NEAR_WHITE_LUMA = 232;
+const NEAR_WHITE_SAT = 20;
+
+function isNearWhite(data, p) {
+  const r = data[p];
+  const g = data[p + 1];
+  const b = data[p + 2];
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  return luma(r, g, b) >= NEAR_WHITE_LUMA && max - min <= NEAR_WHITE_SAT;
+}
+
+/**
  * 从四边做连通填充，标出背景。
  * 画面已经是透明底的（比如静止图）就跳过——那里边框本来就是透明的。
  * @returns {{bg: Uint8Array, already: boolean}}
@@ -136,7 +158,7 @@ function backgroundMask({ w, h, data }) {
       stack.push(i);
       return;
     }
-    if (luma(data[p], data[p + 1], data[p + 2]) < BRIGHT_MIN) return;
+    if (!isNearWhite(data, p)) return;
     bg[i] = 1;
     stack.push(i);
   };
@@ -170,14 +192,7 @@ function backgroundMask({ w, h, data }) {
         stack.push(n);
         continue;
       }
-      if (
-        Math.abs(data[np] - r) > COLOR_TOL ||
-        Math.abs(data[np + 1] - g) > COLOR_TOL ||
-        Math.abs(data[np + 2] - b) > COLOR_TOL
-      ) {
-        continue;
-      }
-      if (luma(data[np], data[np + 1], data[np + 2]) < BRIGHT_MIN) continue;
+      if (!isNearWhite(data, np)) continue;
       bg[n] = 1;
       stack.push(n);
     }
@@ -185,13 +200,22 @@ function backgroundMask({ w, h, data }) {
   return { bg, already: false };
 }
 
-/** 只留下够大的连通块（人物本体），把星芒花瓣之类的贴纸筛掉 */
+/**
+ * 只留下**最大的一块**——也就是她本人。
+ *
+ * 素材里除了她，周围还有墨迹、蝴蝶、卷轴这些装饰（尤其待机那段是横屏的，
+ * 装饰铺得很开）。它们如果被算进外框，她就得为了"装下装饰"而缩小，
+ * 于是待机时看起来比挥手小一截。只留她本人之后，五张素材的外框都是她，
+ * 大小自然就一致了。
+ *
+ * 用比例而不是绝对面积来筛：最大那块是人物，其余一律不要。
+ */
 function subjectMask({ w, h, data }, bg, already) {
   const total = w * h;
   const keep = new Uint8Array(total);
   if (already) {
     for (let i = 0; i < total; i += 1) if (data[i * 4 + 3] >= 16) keep[i] = 1;
-    return keep;
+    return { keep, parts: [{ label: 0, area: 1, minX: 0, minY: 0, maxX: w - 1, maxY: h - 1 }] };
   }
 
   const minArea = Math.max(400, Math.round(total * MIN_BLOB_RATIO));
@@ -223,11 +247,28 @@ function subjectMask({ w, h, data }, bg, already) {
     }
     areas.push(area);
   }
-  for (let i = 0; i < total; i += 1) {
-    const label = labels[i];
-    if (label >= 0 && areas[label] >= minArea) keep[i] = 1;
+  // 每块的面积与外框，交给调用方决定"哪一块是她"
+  const parts = [];
+  for (let label = 0; label < areas.length; label += 1) {
+    if (areas[label] < minArea) continue;
+    parts.push({ label, area: areas[label], minX: w, minY: h, maxX: -1, maxY: -1 });
   }
-  return keep;
+  const byLabel = new Map(parts.map((p) => [p.label, p]));
+  for (let y = 0; y < h; y += 1) {
+    for (let x = 0; x < w; x += 1) {
+      const p = byLabel.get(labels[y * w + x]);
+      if (!p) continue;
+      if (x < p.minX) p.minX = x;
+      if (x > p.maxX) p.maxX = x;
+      if (y < p.minY) p.minY = y;
+      if (y > p.maxY) p.maxY = y;
+    }
+  }
+  for (const p of parts) {
+    p.cx = (p.minX + p.maxX) / 2;
+    p.cy = (p.minY + p.maxY) / 2;
+  }
+  return { keep, parts, labels };
 }
 
 /** 把保留区的 alpha 写回，并铺一条由外向内 / 由内向外的柔和过渡 */
@@ -383,28 +424,45 @@ function processVideo(item, tmpDir) {
   const frames = splitFrames(fs.readFileSync(rawPath), info.w, info.h);
   if (!frames.length) throw new Error(`${item.src} 一帧都没解出来`);
 
-  // 逐帧抠底
+  // 逐帧抠底：背景吃掉之后，剩下的最大一块就是她（星芒花瓣墨迹都比她小）
   const processed = [];
-  let union = null;
+  const boxes = [];
   for (const frame of frames) {
     const image = { w: info.w, h: info.h, data: frame };
     const { bg, already } = backgroundMask(image);
-    const keep = subjectMask(image, bg, already);
-    const { data } = applyAlpha(image, keep);
-    const box = bboxOf(keep, info.w, info.h);
-    if (box) {
-      union = union
-        ? {
-            minX: Math.min(union.minX, box.minX),
-            minY: Math.min(union.minY, box.minY),
-            maxX: Math.max(union.maxX, box.maxX),
-            maxY: Math.max(union.maxY, box.maxY),
-          }
-        : box;
+    const { parts, labels } = subjectMask(image, bg, already);
+    let pick = parts.length ? parts.reduce((a, b) => (a.area > b.area ? a : b), parts[0]) : null;
+
+    // 已经是透明底的素材：整张都是她
+    if (!pick && already) {
+      const whole = { label: -1, minX: 0, minY: 0, maxX: info.w - 1, maxY: info.h - 1 };
+      pick = whole;
     }
+    if (!pick) {
+      processed.push(new Uint8ClampedArray(info.w * info.h * 4));
+      continue;
+    }
+
+    const keep = new Uint8Array(info.w * info.h);
+    if (labels) {
+      for (let p = 0; p < keep.length; p += 1) {
+        if (labels[p] === pick.label) keep[p] = 1;
+      }
+    } else {
+      keep.fill(1); // 已经是透明底的素材
+    }
+    const { data } = applyAlpha(image, keep);
+    boxes.push({ minX: pick.minX, minY: pick.minY, maxX: pick.maxX, maxY: pick.maxY });
     processed.push(data);
   }
-  if (!union) throw new Error(`${item.src} 抠完之后什么都没剩下`);
+  if (!boxes.length) throw new Error(`${item.src} 抠完之后什么都没剩下`);
+
+  // 取中位数而不是并集：万一某一帧有东西误判成主体，也不至于把整段的外框撑大
+  const mid = (key) => {
+    const sorted = boxes.map((b) => b[key]).sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  };
+  const union = { minX: mid('minX'), minY: mid('minY'), maxX: mid('maxX'), maxY: mid('maxY') };
 
   // 统一画布（用整段动作的合并外框，避免逐帧裁切导致她抖动）
   const outPath = path.join(tmpDir, `${item.key}.canvas.rgba`);
@@ -453,7 +511,7 @@ function processStill(tmpDir) {
   const frame = new Uint8ClampedArray(fs.readFileSync(rawPath).buffer);
   const image = { w: info.w, h: info.h, data: frame };
   const { bg, already } = backgroundMask(image);
-  const keep = subjectMask(image, bg, already);
+  const { keep } = subjectMask(image, bg, already);
   const { data } = applyAlpha(image, keep);
   const box = bboxOf(keep, info.w, info.h);
   const canvas = toCanvas(data, info.w, info.h, box);
