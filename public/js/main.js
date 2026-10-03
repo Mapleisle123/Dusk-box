@@ -6,6 +6,7 @@ import { api } from './api.js';
 import { store } from './store.js';
 import { currentRoute, onRouteChange, startRouter, navigate } from './router.js';
 import { esc, icons } from './ui.js';
+import { mascotOnRouteChange, mountMascot } from './mascot.js';
 
 import { pageHome } from './pages/home.js';
 import { pagePosts } from './pages/posts.js';
@@ -148,10 +149,15 @@ async function bootstrap() {
   }
 
   onRouteChange(render);
+  // 每次切页：让她挥一次手（她第一次露面也是靠这个）
+  onRouteChange(() => mascotOnRouteChange());
   startRouter();
 
   pollService();
   setInterval(pollService, 15000);
+
+  // 侧栏里的吉祥物：服务连上了再挂，免得她先冒出来又没数据
+  mountMascot();
 }
 
 bootstrap();

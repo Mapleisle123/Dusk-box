@@ -1762,3 +1762,92 @@ html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }
   color: var(--text-2);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- 吉祥物「祀」（住在侧栏导航与底部状态之间的空白里） ---- */
+/*
+  几条改之前先读的约束：
+   1. 她占侧栏自己那格，所以不存在"挡住页面按钮"的问题；
+   2. 侧栏是 flex，她必须能随窗口变矮而缩（min-height:0 + max-height:100%），
+      否则会把底部服务状态顶出屏幕；
+   3. 气泡挂在她的**右边**——她那张图本来就是手指朝右，
+      气泡接在手指方向上，读起来就是"她指哪儿、她说什么"。
+*/
+.sidebar-mascot {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: var(--space-3) 0;
+}
+
+/* 窗口太矮就没她的地方了：宁可藏起来，也不把侧栏挤变形 */
+@media (max-height: 620px) {
+  .sidebar-mascot { display: none; }
+}
+
+.mascot {
+  position: relative;
+  max-height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.mascot-body {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: grab;
+  touch-action: none; /* 拖动时不要被浏览器的滚动手势抢走 */
+  transition: transform .38s var(--ease), filter .3s var(--ease);
+}
+
+.mascot-body:hover,
+.mascot-body:focus-visible {
+  filter: drop-shadow(0 10px 22px color-mix(in srgb, var(--primary) 30%, transparent));
+}
+
+/* 被拖着走的时候：脱离侧栏、浮在最上面、跟着鼠标 */
+.mascot-body.is-dragging {
+  position: fixed;
+  z-index: 90;
+  cursor: grabbing;
+  pointer-events: none;
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, .28));
+}
+
+.mascot-img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* 气泡在她右边：手指朝右，话接在手指的方向上 */
+.mascot-bubble {
+  position: absolute;
+  left: calc(100% + 10px);
+  bottom: 42%;
+  width: max-content;
+  max-width: 190px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: var(--bw) solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  text-align: left;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity .25s var(--ease), transform .25s var(--ease);
+  pointer-events: none;
+}
+
+.mascot-bubble.show { opacity: 1; transform: translateX(0); }
