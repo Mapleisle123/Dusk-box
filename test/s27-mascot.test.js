@@ -19,6 +19,15 @@ const read = (rel) => fs.readFileSync(path.join(PROJECT_ROOT, rel), 'utf8');
 
 const ASSETS = ['wave.png', 'struggle.png', 'idle.png', 'point.png'];
 
+test('S27 · ms=0 表示"不自动收"，不能直接丢给 setTimeout', () => {
+  // 踩过：pointAndSay(0) 本意是"钉住不收"，但代码把 0 当超时传给 setTimeout，
+  // 0 毫秒立刻执行 → 气泡刚出来就被收掉 → 现象是"单击完全没反应"。
+  const mascot = read('public/js/mascot.js');
+  const body = mascot.slice(mascot.indexOf('function pointAndSay'));
+  assert.match(body, /if \(ms > 0\) \{/, '自动收起必须判断 ms > 0');
+  assert.match(body, /if \(!hidden && !pinned\)/, '自动收起时不该打断钉住的状态');
+});
+
 test('S27 · 拖动后的"忽略本次点击"标记必须会自己过期', () => {
   // 它靠"下一次 click 到来时消费掉"来清除；可拖到别处松手时那次 click 不会发，
   // 标记就会一直挂着，把用户后面第一次真正的单击吃掉——表现为"单击没反应"。

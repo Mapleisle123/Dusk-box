@@ -92,13 +92,17 @@ function pointAndSay(ms = 4200) {
   void els.bubble.offsetWidth;
   els.bubble.classList.add('show');
   clearTimeout(timers.bubble);
-  timers.bubble = setTimeout(() => {
-    hideBubble();
-    if (!hidden) {
-      showState('wave');
-      restartIdleTimer();
-    }
-  }, ms);
+  // ms = 0 表示"不自动收"（钉住）。**不能**直接把它丢给 setTimeout——
+  // 0 毫秒会立刻执行，气泡刚冒出来就被自己收掉，看着就是"点了没反应"。
+  if (ms > 0) {
+    timers.bubble = setTimeout(() => {
+      hideBubble();
+      if (!hidden && !pinned) {
+        showState('wave');
+        restartIdleTimer();
+      }
+    }, ms);
+  }
 }
 
 /** 收起 / 展开 */
