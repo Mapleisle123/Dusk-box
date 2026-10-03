@@ -1827,14 +1827,23 @@ html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }
 }
 
 .mascot-img {
+  /* 两层叠在同一位置做交叉淡入：新图淡入、旧图淡出，顺带轻微上浮。
+     直接换 src 是硬切，切换时会闪一下，所以必须两张图接力。 */
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
   object-position: bottom center;
+  opacity: 0;
+  transform: translateY(5px);
+  transition: opacity .34s var(--ease), transform .34s var(--ease);
   user-select: none;
   -webkit-user-drag: none;
 }
+
+.mascot-img.show { opacity: 1; transform: none; }
 
 /* 气泡在她右边：手指朝右，话接在手指的方向上 */
 .mascot-bubble {

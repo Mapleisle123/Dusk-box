@@ -26,6 +26,8 @@ const IMG = {
 };
 
 let els = null; // { wrap, body, img, bubble }
+let layers = null; // 两张叠在一起的图：[当前显示的, 备用的]
+let shown = 0;
 let state = 'wave';
 let drag = null;
 let timers = { idle: 0, bubble: 0 };
@@ -39,12 +41,23 @@ function clearIdleTimer() {
   clearTimeout(timers.idle);
 }
 
-/** 秀一张状态图（不带气泡） */
+/**
+ * 换一张状态图。
+ *
+ * 用**两张叠在一起的图做交叉淡入**：把待换的那张先放到底层、淡入，
+ * 同时把原来那张淡出。直接改 src 是硬切，一闪很生硬。
+ */
 function showState(name) {
-  if (!els) return;
+  if (!els || state === name) return;
   state = name;
   els.body.classList.toggle('is-pointing', name === 'point');
-  els.img.src = IMG[name];
+  const nextIndex = shown === 0 ? 1 : 0;
+  const next = layers[nextIndex];
+  const prev = layers[shown];
+  next.src = IMG[name];
+  next.classList.add('show');
+  prev.classList.remove('show');
+  shown = nextIndex;
 }
 
 /** 10 秒没人理她 → 待机；任何操作都会把计时清零 */
@@ -170,7 +183,8 @@ export function mountMascot() {
   wrap.className = 'mascot';
   wrap.innerHTML = `
     <button class="mascot-body" type="button" aria-label="吉祥物：祀">
-      <img class="mascot-img" src="${IMG.wave}" alt="" decoding="async">
+      <img class="mascot-img show" src="${IMG.wave}" alt="" decoding="async">
+      <img class="mascot-img" alt="" decoding="async">
       <span class="mascot-bubble" hidden></span>
     </button>`;
   slot.appendChild(wrap);
@@ -178,13 +192,16 @@ export function mountMascot() {
   els = {
     wrap,
     body: wrap.querySelector('.mascot-body'),
-    img: wrap.querySelector('.mascot-img'),
     bubble: wrap.querySelector('.mascot-bubble'),
   };
+  layers = [...wrap.querySelectorAll('.mascot-img')];
+  shown = 0;
   state = 'wave';
 
   // 图不在（素材没放好）：整块收起，绝不留破图
-  els.img.addEventListener('error', () => unmountMascot(), { once: true });
+  for (const layer of layers) {
+    layer.addEventListener('error', () => unmountMascot(), { once: true });
+  }
 
   els.body.addEventListener('pointerdown', onPointerDown);
   els.body.addEventListener('pointermove', onPointerMove);
