@@ -158,6 +158,17 @@ async function bootstrap() {
 
   // 侧栏里的吉祥物：服务连上了再挂，免得她先冒出来又没数据
   mountMascot();
+
+  // 关掉浏览器就把服务也停掉：
+  //   正常心跳每 20 秒一条；关闭/刷新时 sendBeacon 补一条 {bye:true}，
+  //   服务端收到后给 3 秒宽限（刷新时新心跳会撤销），仍然没人理就退出。
+  const beat = (bye) =>
+    navigator.sendBeacon
+      ? navigator.sendBeacon('/api/keepalive', new Blob([JSON.stringify({ bye: !!bye })], { type: 'application/json' }))
+      : fetch('/api/keepalive', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bye: !!bye }) }).catch(() => {});
+  beat(false);
+  setInterval(() => beat(false), 20000);
+  window.addEventListener('pagehide', () => beat(true));
 }
 
 bootstrap();

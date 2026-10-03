@@ -198,7 +198,7 @@ test(
   },
 );
 
-test('S24 · 托盘不再自动启动；停服务改由桌面「停止服务」快捷方式 + 设置页按钮', async (t) => {
+test('S24 · 托盘不再启动；改成"关掉浏览器就停服务"', async (t) => {
   const srv = await startTestServer();
   t.after(() => srv.close());
 
@@ -216,24 +216,23 @@ test('S24 · 托盘不再自动启动；停服务改由桌面「停止服务」�
   // 而"服务本体启动时拉"这条路径可靠——bat 启动就有托盘。所以只留一条路。
   await main({ env: { ...process.env, QSX_NO_OPEN: '1' } });
   const index = fs.readFileSync(path.join(PROJECT_ROOT, 'server', 'index.js'), 'utf8');
-  assert.doesNotMatch(
-    index,
-    /startTray\(/,
-    '托盘不该再自动启动（这台机器注册不成系统托盘图标，留着只会多一个后台进程）',
-  );
+  assert.doesNotMatch(index, /startTray\(/, '托盘不该再启动（这台机器注册不成系统托盘图标）');
   assert.doesNotMatch(
     fs.readFileSync(path.join(PROJECT_ROOT, 'server', 'launch.js'), 'utf8'),
     /trayStarter\(/,
     '启动器不该再重复拉托盘（两处并存只会让"到底有没有托盘"变得难查）',
   );
-  // 退路：桌面上的「停止服务」小脚本，只发一个本地请求
-  const stop = fs.readFileSync(path.join(PROJECT_ROOT, 'DuskBox-stop.vbs'));
-  assert.ok([...stop].every((b) => b < 128), 'stop.vbs 必须是纯 ASCII（WSH 按 ANSI 读 .vbs）');
-  assert.match(stop.toString('latin1'), /api\/shutdown/, '它要靠停止接口停服务');
-  assert.match(
-    fs.readFileSync(path.join(PROJECT_ROOT, 'server', 'desktop.js'), 'utf8'),
-    /DuskBox-stop\.lnk/,
-    '创建桌面图标时应当一并放上「停止服务」快捷方式',
+  // 关掉浏览器就停服务：服务端要有心跳接口，页面要发心跳 + 关闭时补一条 bye
+  const app = fs.readFileSync(path.join(PROJECT_ROOT, 'server', 'app.js'), 'utf8');
+  assert.match(app, /router\.post\('\/api\/keepalive'/, '服务端要有心跳接口');
+  assert.match(app, /SHUTDOWN_GRACE_MS/, '收到 bye 之后要留一点宽限（刷新页面能撤销）');
+  const mainJs = fs.readFileSync(path.join(PROJECT_ROOT, 'public', 'js', 'main.js'), 'utf8');
+  assert.match(mainJs, /sendBeacon\('\/api\/keepalive'/, '关闭页面时要补发一条 bye');
+  assert.match(mainJs, /setInterval\(\(\) => beat\(false\), 20000\)/, '页面要定期发心跳');
+  assert.equal(
+    fs.existsSync(path.join(PROJECT_ROOT, 'DuskBox-stop.vbs')),
+    false,
+    '托盘那套退路（桌面停止脚本）应当已经撤掉',
   );
 });
 

@@ -30,15 +30,6 @@ import {
 /** 桌面快捷方式的说明文字 */
 const SHORTCUT_DESC = 'Dusk Box · 从桌面打开茜色箱';
 
-/** 「停止服务」那个快捷方式 */
-const STOP_LINK_NAME = 'DuskBox-stop.lnk';
-const STOP_SHORTCUT_DESC = 'Dusk Box · 停止本地服务（数据不会丢）';
-
-/** 停止服务用的小脚本（纯 ASCII 的 VBS，只发一个本地 HTTP 请求） */
-export const STOP_SCRIPT_NAME = 'DuskBox-stop.vbs';
-export function stopScriptPath() {
-  return path.join(PROJECT_ROOT, STOP_SCRIPT_NAME);
-}
 
 /** 问系统要桌面目录（纯 ASCII 脚本，路径由系统给出） */
 const DESKTOP_SCRIPT = '[Console]::Out.Write([Environment]::GetFolderPath(\'Desktop\'))';
@@ -99,7 +90,6 @@ export async function setDesktopShortcut(enabled) {
 
   if (!enabled) {
     removeShortcut(linkPath);
-    removeShortcut(path.join(await desktopDir(), STOP_LINK_NAME));
     return getDesktopShortcut();
   }
 
@@ -119,17 +109,6 @@ export async function setDesktopShortcut(enabled) {
       workdir: PROJECT_ROOT,
       description: SHORTCUT_DESC,
     });
-    // 顺手放一个「停止服务」图标：这台机器上托盘注册不成系统图标，
-    // 所以停服务改用它——只发一个本地请求，不依赖托盘、也不弹 PowerShell 窗口。
-    const stop = stopScriptPath();
-    if (fs.existsSync(stop)) {
-      await createShortcut({
-        linkPath: path.join(await desktopDir(), STOP_LINK_NAME),
-        target: stop,
-        workdir: PROJECT_ROOT,
-        description: STOP_SHORTCUT_DESC,
-      });
-    }
   } catch (err) {
     throw new Error(`创建桌面快捷方式失败：${err.message}`);
   }

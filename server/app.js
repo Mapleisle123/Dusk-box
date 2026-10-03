@@ -132,6 +132,34 @@ export function createApp({
     return { ok: true, stopping: true };
   });
 
+  /**
+   * 客户端心跳：**关掉浏览器就把服务也停掉**。
+   *
+   * 页面每 20 秒打一次正常心跳；关闭/刷新时用 sendBeacon 补一条 {bye:true}。
+   * 收到 bye 之后给 3 秒宽限（刷新页面时新心跳会撤销它），仍然没有心跳就退出。
+   * 多个标签页共存也没问题：只要还有页面在打心跳，就不会退出。
+   *
+   * 只在一开始收到过心跳之后才启用——否则"双击 bat 起服务、还没开页面"的
+   * 情况会被误判成"页面关掉了"，刚起来就自杀。
+   */
+  let alive = false;
+  let pendingExit = null;
+  const SHUTDOWN_GRACE_MS = 3000;
+  router.post('/api/keepalive', async ({ req }) => {
+    const { readJson } = await import('./http.js');
+    const body = await readJson(req).catch(() => ({}));
+    alive = true;
+    if (pendingExit) {
+      clearTimeout(pendingExit);
+      pendingExit = null;
+    }
+    if (body?.bye && typeof onShutdown === 'function') {
+      pendingExit = setTimeout(() => onShutdown(), SHUTDOWN_GRACE_MS);
+      pendingExit.unref?.();
+    }
+    return { ok: true, bye: Boolean(body?.bye) };
+  });
+
   mountSettingsRoutes(router, ctx);
   mountDesktopRoutes(router, ctx);
   mountPostsRoutes(router, ctx);
