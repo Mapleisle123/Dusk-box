@@ -32,10 +32,7 @@ const IMG = {
 const HIDDEN_SHIFT = '-58%';
 
 let els = null; // { wrap, body, bubble }
-let layers = null; // 两张叠着的图：[当前显示, 备用]
-let shown = 0;
-/** 每次换图自增：图片是异步加载的，旧的那次回调要作废 */
-let showToken = 0;
+let layers = null; // 五张图各占一层，切换只切"哪一层可见"
 let state = 'wave';
 let hidden = false;
 let drag = null;
@@ -57,23 +54,9 @@ export function mascotEnabled() {
 function showState(name, force = false) {
   if (!els || (state === name && !force)) return;
   state = name;
-  const nextIndex = shown === 0 ? 1 : 0;
-  const next = layers[nextIndex];
-  const prev = layers[shown];
-  const token = (showToken += 1);
-  next.src = IMG[name];
-
-  // 必须等新图**加载完**再交叉淡入。直接切的话，那一层上还挂着它上一次的内容
-  // （比如刚从挥手切过来），于是"收起"的位置会闪出挥手图——而且是看运气的，
-  // 加载快就不出现、加载慢就闪一下。
-  const swap = () => {
-    if (token !== showToken || !els || !next.isConnected) return; // 已经又换过图了
-    next.classList.add('show');
-    prev.classList.remove('show');
-    shown = nextIndex;
-  };
-  if (next.complete && next.naturalWidth > 0) swap();
-  else next.addEventListener('load', swap, { once: true });
+  // 只切"哪一层可见"：五张图的地址是固定的，不存在"换 src 之后 complete 还是旧图"
+  // 那种时序问题（那正是"收起闪出挥手图""松手后停在中间显示上一张"的根因）。
+  for (const layer of layers) layer.classList.toggle('show', layer.dataset.state === name);
 }
 
 /** 10 秒没人管她就待机；任何操作都会把计时清零 */
@@ -218,8 +201,12 @@ export function mountMascot() {
   wrap.className = 'mascot';
   wrap.innerHTML = `
     <button class="mascot-body" type="button" aria-label="吉祥物：祀">
-      <img class="mascot-img show" src="${IMG.wave}" alt="" decoding="async">
-      <img class="mascot-img" alt="" decoding="async">
+      ${Object.entries(IMG)
+        .map(
+          ([key, src]) =>
+            `<img class="mascot-img${key === 'wave' ? ' show' : ''}" data-state="${key}" src="${src}" alt="" decoding="async">`,
+        )
+        .join('')}
       <span class="mascot-bubble" hidden></span>
     </button>`;
   document.body.appendChild(wrap);
@@ -230,16 +217,8 @@ export function mountMascot() {
     bubble: wrap.querySelector('.mascot-bubble'),
   };
   layers = [...wrap.querySelectorAll('.mascot-img')];
-  shown = 0;
   state = 'wave';
   hidden = false;
-
-  // 五张图先预热（本地文件，合计 2.5MB）。不预热的话，第一次切到某张图要等
-  // 文件读完才淡入——单击/收起那一瞬间会明显顿一下。
-  for (const src of Object.values(IMG)) {
-    const warm = new Image();
-    warm.src = src;
-  }
 
   // 图不在（素材没放好）：整块收起，绝不留破图
   for (const layer of layers) {
@@ -295,7 +274,6 @@ export function unmountMascot() {
   clearTimeout(timers.bubble);
   drag = null;
   layers = null;
-  shown = 0;
   if (els) els.wrap.remove();
   els = null;
 }

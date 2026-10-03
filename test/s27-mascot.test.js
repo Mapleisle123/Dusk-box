@@ -21,11 +21,8 @@ const ASSETS = ['wave.png', 'struggle.png', 'idle.png', 'point.png'];
 
 test('S27 · 五张图要预热、双击判定别拖太长（否则单击显得卡）', () => {
   const mascot = read('public/js/mascot.js');
-  assert.match(
-    mascot,
-    /for \(const src of Object\.values\(IMG\)\) \{[\s\S]{0,80}new Image\(\)/,
-    '挂载时要把五张图预热，否则第一次切换要等文件读完',
-  );
+  // 五张图在挂载时一次性写进 DOM，等于天然预热（不用额外 new Image()）
+  assert.match(mascot, /Object\.entries\(IMG\)/, '五张图应在挂载时一次生成，天然预热');
   const wait = /clickTimer = setTimeout\([\s\S]*?\}, (\d+)\)/.exec(mascot);
   assert.ok(wait, '应能找到双击判定的等待毫秒数');
   assert.ok(
@@ -34,15 +31,14 @@ test('S27 · 五张图要预热、双击判定别拖太长（否则单击显得�
   );
 });
 
-test('S27 · 换图要等新图加载完再交叉淡入（否则会闪出上一张）', () => {
-  // 踩过：先换 src 再立刻把那一层显示出来，如果新图还没解码完，
-  // 那一层上挂着的还是它上一次的内容 —— "收起"的位置会偶尔闪出挥手图。
-  // 所以必须等 load（或本来就 complete）再切，并且用 token 作废旧回调。
+test('S27 · 五张图各占一层，换图只切可见性（不换来换去换 src）', () => {
+  // 踩过两次：两张图轮流换 src 时，"换完立刻读 complete"读到的还是旧图的状态，
+  // 于是收起会闪出挥手图、松手后会停在中?间显示上一张。
+  // 现在五张图各占一层、地址固定，切换只切 .show。
   const mascot = read('public/js/mascot.js');
-  const body = mascot.slice(mascot.indexOf('function showState'), mascot.indexOf('restartIdleTimer'));
-  assert.match(body, /next\.addEventListener\('load', swap, \{ once: true \}\)/, '要等图片加载完再切');
-  assert.match(body, /if \(next\.complete && next\.naturalWidth > 0\) swap\(\)/, '已缓存时应立刻切');
-  assert.match(body, /token !== showToken/, '旧的回调要能作废（连续快速换图时不打架）');
+  assert.match(mascot, /layer\.dataset\.state === name/, '换图应按 data-state 切可见性');
+  assert.match(mascot, /data-state="\$\{key\}"/, '五层图应由 IMG 一次生成，各带自己的状态名');
+  assert.doesNotMatch(mascot, /\.src = IMG\[/, '不该再运行时换 src');
 });
 
 test('S27 · ms=0 表示"不自动收"，不能直接丢给 setTimeout', () => {
