@@ -51,10 +51,12 @@ test('S27 · 飞回原位途中保持挣扎图，落位后再变挥手；收起�
   // 而这时若立刻双击收起，露出来的那一条也悬在半路，看着跟上一次一样。
   const mascot = read('public/js/mascot.js');
   assert.match(mascot, /let flyTimer = 0/, '要有飞回动画的计时');
+  // 换图要在**松手当场**发生（淡入会在飞回途中走完），落地时已经是挥手；
+  // 之前是落位后才换，会在角落里先愣一下 struggle，很违和。
   assert.match(
     mascot,
-    /flyTimer = setTimeout\(\(\) => \{[\s\S]{0,140}state === 'struggle'[\s\S]{0,120}showState\(hidden \? 'hide' : 'wave'\)/,
-    '飞回途中保持挣扎，落位后再按"有没有收起"换成 hide 或挥手',
+    /showState\(hidden \? 'hide' : 'wave'\);\s*\n\s*\/\/ 待机计时等她落位再开始/,
+    '松手就要换图，不能等她落位才换',
   );
   assert.match(
     mascot,
