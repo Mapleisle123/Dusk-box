@@ -217,6 +217,12 @@ function onPointerUp(e) {
       pointAndSay(0);
       return;
     }
+    // 拖之前她正在待机：拖完继续待机（重新起算 10 秒）
+    if (stateBeforeDrag === 'idle') {
+      showState('idle');
+      restartIdleTimer();
+      return;
+    }
     showState('wave');
   }, 180);
   // 待机计时等她落位再开始

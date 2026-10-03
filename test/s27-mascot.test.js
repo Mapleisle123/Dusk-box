@@ -35,7 +35,7 @@ test('S27 · 收起状态下拖出去再松手要回到 hide，不是展开成�
   const mascot = read('public/js/mascot.js');
   assert.match(
     mascot,
-    /if \(hidden\) \{\s*\n\s*showState\('hide'\);[\s\S]{0,260}showState\('wave'\)/,
+    /if \(hidden\) \{\s*\n\s*showState\('hide'\);[\s\S]{0,600}showState\('wave'\)/,
     '松手后的收尾要按"有没有收起"决定回到哪张图（收起→hide，否则回挥手）',
   );
 });
@@ -60,6 +60,11 @@ test('S27 · 飞回原位途中保持挣扎图，落位后再变挥手；收起�
     mascot,
     /stateBeforeDrag === 'point'[\s\S]{0,90}pinned = true;[\s\S]{0,40}pointAndSay\(0\)/,
     '拖动前是 point 的，拖完要回到 point（气泡也恢复钉住）',
+  );
+  assert.match(
+    mascot,
+    /stateBeforeDrag === 'idle'[\s\S]{0,90}showState\('idle'\)/,
+    '拖动前在待机的，拖完要继续待机',
   );
   assert.match(
     mascot,
