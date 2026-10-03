@@ -36,6 +36,8 @@ let layers = null; // 五张图各占一层，切换只切"哪一层可见"
 let state = 'wave';
 let hidden = false;
 let drag = null;
+/** 拖动之前她是什么状态：拖完要回到原来那个状态（point 就回 point） */
+let stateBeforeDrag = 'wave';
 /** 刚拖完的那一次 click 要丢掉：浏览器在拖动结束后仍会补发 click，
    不丢掉的话她会立刻被"单击=point"覆盖，表现为"拖完定格成 point"。 */
 let justDragged = false;
@@ -140,6 +142,7 @@ function onPointerMove(e) {
     drag.moved = true;
     clearTimeout(timers.idle);
     hideBubble();
+    stateBeforeDrag = state; // 记下来，松手要回到它
     pinned = false;
     const rect = els.body.getBoundingClientRect();
     drag.dx = drag.sx - rect.left;
@@ -203,7 +206,18 @@ function onPointerUp(e) {
   // 会先在角落里挣扎着站一下。这两个极端都试过了，都不对。
   clearTimeout(flyTimer);
   flyTimer = setTimeout(() => {
-    if (state === 'struggle') showState(hidden ? 'hide' : 'wave');
+    if (state !== 'struggle') return;
+    if (hidden) {
+      showState('hide');
+      return;
+    }
+    // 拖之前她正指着右边（气泡钉着）：拖完仍旧回到那一张，别擅自变成挥手
+    if (stateBeforeDrag === 'point') {
+      pinned = true;
+      pointAndSay(0);
+      return;
+    }
+    showState('wave');
   }, 180);
   // 待机计时等她落位再开始
   clearTimeout(timers.idle);

@@ -35,8 +35,8 @@ test('S27 · 收起状态下拖出去再松手要回到 hide，不是展开成�
   const mascot = read('public/js/mascot.js');
   assert.match(
     mascot,
-    /showState\(hidden \? 'hide' : 'wave'\)/,
-    '松手后的收尾要按"有没有收起"决定回到哪张图',
+    /if \(hidden\) \{\s*\n\s*showState\('hide'\);[\s\S]{0,260}showState\('wave'\)/,
+    '松手后的收尾要按"有没有收起"决定回到哪张图（收起→hide，否则回挥手）',
   );
 });
 
@@ -53,10 +53,13 @@ test('S27 · 飞回原位途中保持挣扎图，落位后再变挥手；收起�
   assert.match(mascot, /let flyTimer = 0/, '要有飞回动画的计时');
   // 换图时机在"快到家"那一下：飞回 0.28s、淡入 0.2s，所以等 0.18s 启动淡入，
   // 落地即挥手。太早会变成"一路飘着的都是挥手"，太晚会在角落里先愣一下。
+  assert.match(mascot, /\}, 180\)/, '换图应在飞回的后段启动（约 180ms）');
+  // 拖之前若是 point（气泡钉着），拖完要回到 point，不能擅自变挥手
+  assert.match(mascot, /stateBeforeDrag = state;/, '拖动开始要记下之前的状态');
   assert.match(
     mascot,
-    /flyTimer = setTimeout\(\(\) => \{\s*\n\s*if \(state === 'struggle'\) showState\(hidden \? 'hide' : 'wave'\);\s*\n\s*\}, 180\)/,
-    '换图应在飞回的后段启动（约 180ms），不是松手当场、也不是落位之后',
+    /stateBeforeDrag === 'point'[\s\S]{0,90}pinned = true;[\s\S]{0,40}pointAndSay\(0\)/,
+    '拖动前是 point 的，拖完要回到 point（气泡也恢复钉住）',
   );
   assert.match(
     mascot,
