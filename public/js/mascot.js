@@ -45,6 +45,8 @@ let clickTimer = 0;
 /** 气泡被"钉住"了：点一下钉住（怎么动鼠标都不消失），再点一下才收回 */
 let pinned = false;
 let timers = { idle: 0, bubble: 0 };
+/** 飞回原位的动画计时（回到位了才换回挥手图） */
+let flyTimer = 0;
 
 export function mascotEnabled() {
   return store.settings?.mascot !== 'false';
@@ -103,6 +105,11 @@ function pointAndSay(ms = 4200) {
 /** 收起 / 展开 */
 function setHidden(value) {
   if (!els) return;
+  // 立刻结束"飞回原位"的动画：不然收起时她还悬在半路，露出来的那一条
+  // 也跟着歪在页面中间，看着就像"收起后显示的还是上一张"。
+  clearTimeout(flyTimer);
+  els.body.style.transition = '';
+  els.body.style.transform = '';
   hidden = value;
   els.wrap.classList.toggle('is-hidden', value);
   els.wrap.style.setProperty('--mascot-shift', HIDDEN_SHIFT);
@@ -187,8 +194,15 @@ function onPointerUp(e) {
     if (els) els.body.style.transform = '';
   });
 
-  showState('wave'); // 用户定的：松手回到挥手图
-  restartIdleTimer();
+  // 飞回途中保持"挣扎"，落位之后再变回挥手——这样"她挣脱着回到角落"的
+  // 动作才连得上；一松手就变挥手的话，你会看见一张挥手图从页面中间飘回去。
+  clearTimeout(flyTimer);
+  flyTimer = setTimeout(() => {
+    if (!hidden && state === 'struggle') {
+      showState('wave');
+      restartIdleTimer();
+    }
+  }, 400);
 }
 
 // ---- 挂载 / 卸载 ---------------------------------------------------------

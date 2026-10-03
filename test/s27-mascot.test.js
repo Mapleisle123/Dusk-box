@@ -31,6 +31,23 @@ test('S27 · 五张图要预热、双击判定别拖太长（否则单击显得�
   );
 });
 
+test('S27 · 飞回原位途中保持挣扎图，落位后再变挥手；收起要立刻结束飞行', () => {
+  // 踩过：一松手就换成挥手图 → 你会看到"挥手图从页面中间飘回家"，
+  // 而这时若立刻双击收起，露出来的那一条也悬在半路，看着跟上一次一样。
+  const mascot = read('public/js/mascot.js');
+  assert.match(mascot, /let flyTimer = 0/, '要有飞回动画的计时');
+  assert.match(
+    mascot,
+    /flyTimer = setTimeout\(\(\) => \{[\s\S]{0,120}state === 'struggle'[\s\S]{0,80}showState\('wave'\)/,
+    '飞回途中保持挣扎，落位后再换挥手',
+  );
+  assert.match(
+    mascot,
+    /function setHidden\(value\) \{[\s\S]{0,220}clearTimeout\(flyTimer\)/,
+    '收起时要立刻结束飞回动画，不能让她悬在半路',
+  );
+});
+
 test('S27 · 五张图各占一层，换图只切可见性（不换来换去换 src）', () => {
   // 踩过两次：两张图轮流换 src 时，"换完立刻读 complete"读到的还是旧图的状态，
   // 于是收起会闪出挥手图、松手后会停在中?间显示上一张。
