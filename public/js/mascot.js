@@ -5,11 +5,12 @@
  * 四种场合换成动作素材——切页挥手、连点跺脚、拖动挣扎、久置待机。
  *
  * 几条设计上的取舍：
- *   - **动作用 `<video>` 而不是动图**。原始素材（img/mascot/gif/*.mp4）是 H.264 视频，
- *     视频的播放控制比动图精确得多：播完有 `ended` 事件、要循环就 `loop`、
- *     不用猜"该等多少毫秒才假装播完"。视频带音轨，必须静音播——这个应用是安静的。
- *   - **素材是白底的**（H.264 带不了透明通道），所以给她一个小圆角"窗"：
- *     白底就是窗的底色，静止那张透明 PNG 也放在同一个窗里，两者观感才一致。
+ *   - **动作用 `<video>` 播 WebM**。原始素材是白底 MP4（H.264 带不了透明通道），
+ *     已经由 scripts/make-mascot-anim.mjs 逐帧抠底、转成带透明通道的 VP9 WebM；
+ *     视频的播放控制还比动图精确：播完有 `ended` 事件、要循环就 `loop`，
+ *     不用猜"该等多少毫秒才假装播完"。素材带音轨，必须静音播——这个应用是安静的。
+ *   - **五张素材共用同一块画布（448x640）**：静止图与四段动作都是按"她本人的外框"
+ *     裁好、摆在同一个底线上的，所以切换时她不会忽大忽小。
  *   - **素材不在也不报错**：视频缺了就只显示静态立绘，拖动与气泡照常，
  *     页面上不会出现破图。
  */
@@ -25,12 +26,12 @@ export { DRAG_THRESHOLD_PX, IDLE_AFTER_MS, STOMP_CLICKS, STOMP_WINDOW_MS, noteCl
 /** 静止（定格）用的是 mascot1 那张抠好的成品 */
 const STILL_SRC = assetUrl('mascot/mascot.png');
 
-/** 四段动作素材，就是她本来的文件名 */
+/** 四段动作素材（由 scripts/make-mascot-anim.mjs 从 MP4 抠出来） */
 const ANIM = {
-  wave: 'mascot/gif/mascot_wave.mp4',
-  stomp: 'mascot/gif/mascot_stomp.mp4',
-  struggle: 'mascot/gif/mascot_struggle.mp4',
-  idle: 'mascot/gif/mascot_idle.mp4',
+  wave: 'mascot/anim/wave.webm',
+  stomp: 'mascot/anim/stomp.webm',
+  struggle: 'mascot/anim/struggle.webm',
+  idle: 'mascot/anim/idle.webm',
 };
 
 /** 静止时点一下她说的话（语气跟着箱子走：安静、不催） */

@@ -28,10 +28,10 @@ const read = (rel) => fs.readFileSync(path.join(PROJECT_ROOT, rel), 'utf8');
 
 const STILL_FILE = 'img/mascot/mascot.png';
 const ANIM_FILES = [
-  'img/mascot/gif/mascot_wave.mp4',
-  'img/mascot/gif/mascot_stomp.mp4',
-  'img/mascot/gif/mascot_struggle.mp4',
-  'img/mascot/gif/mascot_idle.mp4',
+  'img/mascot/anim/wave.webm',
+  'img/mascot/anim/stomp.webm',
+  'img/mascot/anim/struggle.webm',
+  'img/mascot/anim/idle.webm',
 ];
 
 test('S27 · 静止图与四段动作素材都在，且能通过 /img 取到真正的字节', async (t) => {
@@ -53,18 +53,47 @@ test('S27 · 静止图与四段动作素材都在，且能通过 /img 取到真�
   for (const rel of ANIM_FILES) {
     const abs = path.join(PROJECT_ROOT, rel);
     assert.ok(fs.existsSync(abs), `应存在 ${rel}`);
-    // mp4 的盒子以 "ftyp" 开头（第 4~8 字节），用来确认不是改了扩展名的别的东西
+    // WebM 是 EBML 容器，开头固定是 1A 45 DF A3
     assert.equal(
-      fs.readFileSync(abs).subarray(4, 8).toString('latin1'),
-      'ftyp',
-      `${rel} 应是 MP4 视频`,
+      [...fs.readFileSync(abs).subarray(0, 4)]
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join(''),
+      '1a45dfa3',
+      `${rel} 应是 WebM 视频`,
     );
 
     const relUrl = rel.replace(/^img\//, '');
     const res = await fetch(`${srv.base}/img/${relUrl}`);
     assert.equal(res.status, 200, `前端应能取到 ${rel}`);
-    assert.match(res.headers.get('content-type') || '', /video\/mp4/, `${rel} 的 MIME 应是 video/mp4`);
+    assert.match(
+      res.headers.get('content-type') || '',
+      /video\/webm/,
+      `${rel} 的 MIME 应是 video/webm`,
+    );
   }
+});
+
+test('S27 · 五张素材共用同一块画布，切换时她不会忽大忽小', () => {
+  // 静止图的真实尺寸：PNG 的 IHDR 里第 16~24 字节是宽高
+  const png = fs.readFileSync(path.join(PROJECT_ROOT, STILL_FILE));
+  const width = png.readUInt32BE(16);
+  const height = png.readUInt32BE(20);
+
+  const css = read('public/css/app.css');
+  assert.match(
+    css,
+    new RegExp(`aspect-ratio:\\s*${width}\\s*/\\s*${height}`),
+    `样式里的画布比例应与素材一致（${width}x${height}）`,
+  );
+  assert.match(css, /object-fit:\s*contain/, '素材按比例装进画布，不能拉伸');
+  assert.match(css, /object-position:\s*bottom center/, '统一以底线对齐');
+
+  // 转换脚本写死了同一块画布：改了这里就得重跑脚本
+  const script = read('scripts/make-mascot-anim.mjs');
+  assert.match(script, /const CANVAS_W = \d+;/, '转换脚本里应写明画布宽度');
+  assert.match(script, /const CANVAS_H = \d+;/, '转换脚本里应写明画布高度');
+  assert.match(script, /yuva420p/, '导出必须是带透明通道的 VP9（yuva420p）');
+  assert.match(script, /auto-alt-ref[', ]+0/, 'VP9 带 alpha 时必须关掉自动参考帧');
 });
 
 test('S27 · 连点三次算跺脚；中途停超过两秒就重新数', () => {
@@ -127,6 +156,8 @@ test('S27 · 她住在侧栏里（导航与服务状态之间），不再浮在�
   assert.doesNotMatch(css, /translateX\(50%\)/, '旧的半收位移不该还在');
   const mascotCss = css.slice(css.indexOf('.mascot-body {'));
   assert.doesNotMatch(mascotCss.slice(0, 400), /position:\s*fixed/, '平时不该是浮在页面上的');
+  // 素材自己带透明通道，不该再套一个白色小窗
+  assert.match(mascotCss.slice(0, 400), /background:\s*none/, '她是一张贴纸，不该有窗底');
 });
 
 test('S27 · 切页挥一次手：主入口订阅了路由变化，吉祥物会播 wave', () => {

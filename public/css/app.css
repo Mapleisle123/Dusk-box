@@ -1795,22 +1795,19 @@ html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }
 }
 
 .mascot-body {
-  /* 固定一个"窗"的比例（跟着静止立绘），这样在静态图与视频之间切换时窗子不会跳 */
+  /* 五张素材都摆在同一块 448x640 的画布上，这里把画布比例钉死，
+     于是静止图与四段动作之间切换时她不会忽大忽小 */
   width: 100%;
   max-width: 196px;
-  aspect-ratio: 520 / 944;
+  aspect-ratio: 448 / 640;
   max-height: 100%;
   position: relative;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   padding: 0;
-  overflow: hidden;
-  /* 素材是白底的：窗底就跟着白，静止那张透明 PNG 也落在同一个窗里 */
-  background: #fff;
-  border: var(--bw) solid var(--border);
-  border-radius: 14px;
-  box-shadow: var(--shadow-sm);
+  border: 0;
+  background: none; /* 素材自己带透明通道，她是一张贴纸，不是一个小窗 */
   cursor: grab;
   touch-action: none; /* 拖动时不要被浏览器的滚动手势抢走 */
   transition: transform .38s var(--ease), filter .3s var(--ease);
