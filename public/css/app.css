@@ -1788,6 +1788,9 @@ html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }
   left: 8px;
   bottom: 14px;
   z-index: 60;
+  /* 必须给一个明确宽度：她是 fixed + shrink-to-fit，而里面的图全是绝对定位、
+     撑不出宽度，不给宽度的话整块会塌成 0×0（DOM 在、图也在，就是看不见）。 */
+  width: 196px;
   max-height: 70vh;
   display: flex;
   align-items: flex-end;
@@ -1797,8 +1800,7 @@ html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }
   position: relative;
   /* 四张素材已经统一成同一块画布（480x960、同一底线、同一身高），
      这里把画布比例与显示尺寸钉死，所以换图时她不会忽高忽低 */
-  width: 100%;
-  max-width: 196px;
+  width: 196px;
   aspect-ratio: 480 / 960;
   max-height: 100%;
   display: flex;
