@@ -37,6 +37,9 @@ let shown = 0;
 let state = 'wave';
 let hidden = false;
 let drag = null;
+/** 刚拖完的那一次 click 要丢掉：浏览器在拖动结束后仍会补发 click，
+   不丢掉的话她会立刻被"单击=point"覆盖，表现为"拖完定格成 point"。 */
+let justDragged = false;
 let timers = { idle: 0, bubble: 0 };
 
 export function mascotEnabled() {
@@ -154,6 +157,8 @@ function onPointerUp(e) {
 
   if (!wasDrag) return; // 单击交给 click 处理，别在这里重复触发
 
+  justDragged = true; // 紧接着的那次 click 要忽略
+
   // 松手：记下她在哪，删掉拖动态（她立刻回到左下角原位），再用位移把这一跳补成动画
   const flying = els.body.getBoundingClientRect();
   els.body.classList.remove('is-dragging');
@@ -211,6 +216,10 @@ export function mountMascot() {
   els.body.addEventListener('pointercancel', onPointerUp);
   els.body.addEventListener('click', (e) => {
     e.preventDefault();
+    if (justDragged) {
+      justDragged = false; // 这次点击是拖动补发的，放过
+      return;
+    }
     if (hidden) setHidden(false); // 点露出来的那一条 = 展开
     else pointAndSay();
   });
@@ -219,7 +228,7 @@ export function mountMascot() {
     setHidden(true); // 双击 = 收起
   });
   els.body.addEventListener('pointerenter', () => {
-    if (!hidden) pointAndSay(0);
+    if (!hidden && !justDragged) pointAndSay(0);
   });
   els.body.addEventListener('pointerleave', hideBubble);
 
