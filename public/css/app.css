@@ -1820,6 +1820,12 @@ html[data-style="brutal"] .style-opt-preview.liquid { border-radius: 12px; }
   filter: drop-shadow(0 10px 22px color-mix(in srgb, var(--primary) 30%, transparent));
 }
 
+/* 按下去立刻有反馈：双击判定要等 200ms，这段时间屏幕上必须"动一下"，
+   否则会觉得点了没反应。用 filter 而不是 transform —— transform 还要留给收/展与拖动。 */
+.mascot-body:active {
+  filter: brightness(.94) drop-shadow(0 4px 10px rgba(0, 0, 0, .18));
+}
+
 /* 被拖着走的时候：脱离侧栏、浮在最上面、跟着鼠标 */
 .mascot-body.is-dragging {
   position: fixed;

@@ -234,6 +234,13 @@ export function mountMascot() {
   state = 'wave';
   hidden = false;
 
+  // 五张图先预热（本地文件，合计 2.5MB）。不预热的话，第一次切到某张图要等
+  // 文件读完才淡入——单击/收起那一瞬间会明显顿一下。
+  for (const src of Object.values(IMG)) {
+    const warm = new Image();
+    warm.src = src;
+  }
+
   // 图不在（素材没放好）：整块收起，绝不留破图
   for (const layer of layers) {
     layer.addEventListener('error', () => unmountMascot(), { once: true });
@@ -265,7 +272,7 @@ export function mountMascot() {
     clickTimer = setTimeout(() => {
       pinned = true; // 钉住：鼠标移开也不消失
       pointAndSay(0);
-    }, 260); // 等一等，看是不是双击
+    }, 200); // 等一等，看是不是双击（太长会显得点了没反应）
   });
   els.body.addEventListener('dblclick', (e) => {
     e.preventDefault();

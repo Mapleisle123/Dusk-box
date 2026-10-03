@@ -19,6 +19,21 @@ const read = (rel) => fs.readFileSync(path.join(PROJECT_ROOT, rel), 'utf8');
 
 const ASSETS = ['wave.png', 'struggle.png', 'idle.png', 'point.png'];
 
+test('S27 · 五张图要预热、双击判定别拖太长（否则单击显得卡）', () => {
+  const mascot = read('public/js/mascot.js');
+  assert.match(
+    mascot,
+    /for \(const src of Object\.values\(IMG\)\) \{[\s\S]{0,80}new Image\(\)/,
+    '挂载时要把五张图预热，否则第一次切换要等文件读完',
+  );
+  const wait = /clickTimer = setTimeout\([\s\S]*?\}, (\d+)\)/.exec(mascot);
+  assert.ok(wait, '应能找到双击判定的等待毫秒数');
+  assert.ok(
+    Number(wait[1]) <= 220,
+    `双击判定的等待不能太长（现在 ${wait[1]}ms），否则单击会显得"点了没反应"`,
+  );
+});
+
 test('S27 · 换图要等新图加载完再交叉淡入（否则会闪出上一张）', () => {
   // 踩过：先换 src 再立刻把那一层显示出来，如果新图还没解码完，
   // 那一层上挂着的还是它上一次的内容 —— "收起"的位置会偶尔闪出挥手图。
