@@ -19,6 +19,17 @@ const read = (rel) => fs.readFileSync(path.join(PROJECT_ROOT, rel), 'utf8');
 
 const ASSETS = ['wave.png', 'struggle.png', 'idle.png', 'point.png'];
 
+test('S27 · 换图要等新图加载完再交叉淡入（否则会闪出上一张）', () => {
+  // 踩过：先换 src 再立刻把那一层显示出来，如果新图还没解码完，
+  // 那一层上挂着的还是它上一次的内容 —— "收起"的位置会偶尔闪出挥手图。
+  // 所以必须等 load（或本来就 complete）再切，并且用 token 作废旧回调。
+  const mascot = read('public/js/mascot.js');
+  const body = mascot.slice(mascot.indexOf('function showState'), mascot.indexOf('restartIdleTimer'));
+  assert.match(body, /next\.addEventListener\('load', swap, \{ once: true \}\)/, '要等图片加载完再切');
+  assert.match(body, /if \(next\.complete && next\.naturalWidth > 0\) swap\(\)/, '已缓存时应立刻切');
+  assert.match(body, /token !== showToken/, '旧的回调要能作废（连续快速换图时不打架）');
+});
+
 test('S27 · ms=0 表示"不自动收"，不能直接丢给 setTimeout', () => {
   // 踩过：pointAndSay(0) 本意是"钉住不收"，但代码把 0 当超时传给 setTimeout，
   // 0 毫秒立刻执行 → 气泡刚出来就被收掉 → 现象是"单击完全没反应"。
