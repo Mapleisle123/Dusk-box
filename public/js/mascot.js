@@ -16,7 +16,7 @@
 
 import { assetUrl } from './api.js';
 import { store } from './store.js';
-import { DRAG_THRESHOLD_PX, IDLE_AFTER_MS, mascotLineFor, noteClick } from './mascot-rules.js';
+import { DRAG_THRESHOLD_PX, IDLE_AFTER_MS, mascotLineFor } from './mascot-rules.js';
 
 const IMG = {
   wave: assetUrl('mascot/wave.png'),
@@ -27,7 +27,6 @@ const IMG = {
 
 let els = null; // { wrap, body, img, bubble }
 let state = 'wave';
-let clickTimes = [];
 let drag = null;
 let timers = { idle: 0, bubble: 0 };
 let bound = false;
@@ -124,9 +123,7 @@ function onPointerUp(e) {
   }
 
   if (!wasDrag) {
-    const result = noteClick(clickTimes, Date.now());
-    clickTimes = result.recent;
-    pointAndSay();
+    pointAndSay(); // 点一下：她指向右边，说这一页该干什么
     return;
   }
 
@@ -201,7 +198,6 @@ export function unmountMascot() {
   clearIdleTimer();
   clearTimeout(timers.bubble);
   drag = null;
-  clickTimes = [];
   if (els) els.wrap.remove();
   els = null;
 }
