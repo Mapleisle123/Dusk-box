@@ -104,6 +104,10 @@ function onPointerMove(e) {
     els.body.style.left = `${rect.left}px`;
     els.body.style.top = `${rect.top}px`;
     els.body.classList.add('is-dragging');
+    // 关键一步：把她挪到 <body> 底下再拖。
+    // 侧栏带着 backdrop-filter，自成一层"层叠上下文"，里面的 z-index 再高
+    // 也压不过外面的主内容区——不搬出去，拖到右侧就会被页面盖住。
+    document.body.appendChild(els.body);
     showState('struggle');
   }
   const rect = els.body.getBoundingClientRect();
@@ -130,6 +134,7 @@ function onPointerUp(e) {
   // 松手：记下她在哪，删掉拖动态让她瞬间回位，再用一段位移把这一跳补成动画
   const flying = els.body.getBoundingClientRect();
   els.body.classList.remove('is-dragging');
+  els.wrap.appendChild(els.body); // 放回侧栏那一格，她照旧住在那儿
   els.body.style.left = '';
   els.body.style.top = '';
   els.body.style.width = '';
