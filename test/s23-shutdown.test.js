@@ -149,7 +149,7 @@ test('S23 · 真实进程：点了停止，进程真的在几秒内退出', asyn
 
   const child = spawn(process.execPath, [path.join(PROJECT_ROOT, 'server', 'index.js')], {
     cwd: PROJECT_ROOT,
-    env: { ...process.env, QSX_NO_OPEN: '1', QSX_CONFIG_FILE: cfgFile },
+    env: { ...process.env, QSX_NO_OPEN: '1', QSX_NO_TRAY: '1', QSX_CONFIG_FILE: cfgFile },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   t.after(() => {

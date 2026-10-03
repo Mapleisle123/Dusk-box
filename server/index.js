@@ -15,6 +15,7 @@ import { startScheduler } from './backup.js';
 import { openBrowser } from './browser.js';
 import { refreshAutostartTarget } from './autostart.js';
 import { refreshDesktopShortcutTarget } from './desktop.js';
+import { startTray } from './launch.js';
 
 /** 检查端口是否可用 */
 function isPortFree(port, host = '127.0.0.1') {
@@ -65,6 +66,11 @@ async function main() {
     console.log('');
     startScheduler(app);
     if (process.env.QSX_NO_OPEN !== '1') openBrowser(url);
+
+    // 托盘也在这里拉一次，这样"双击 bat / 命令行起服务"同样有右下角图标。
+    // 启动器那边也会拉：托盘脚本内部有单例互斥体，重复调用会自己安静退出，
+    // 所以两条路径并存不会出现两个图标。
+    startTray();
 
     // 开机自启的快捷方式指向的是启动脚本。脚本换文件（比如从 .bat 换成无窗口启动器）时，
     // 老快捷方式不会自己跟着变，得在这里顺手校正一次，否则用户每次开机都还是旧行为。

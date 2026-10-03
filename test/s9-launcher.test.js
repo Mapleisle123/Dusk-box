@@ -49,7 +49,7 @@ function freePort() {
 async function launchServer(env, { timeoutMs = 20000 } = {}) {
   const child = spawn(process.execPath, [ENTRY], {
     cwd: PROJECT_ROOT,
-    env: { ...process.env, QSX_NO_OPEN: '1', ...env },
+    env: { ...process.env, QSX_NO_OPEN: '1', QSX_NO_TRAY: '1', ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
@@ -252,7 +252,7 @@ test(
 
     const child = spawn('cmd.exe', ['/c', batPath], {
       cwd: PROJECT_ROOT,
-      env: { ...process.env, QSX_NO_OPEN: '1', QSX_CONFIG_FILE: cfg.file },
+      env: { ...process.env, QSX_NO_OPEN: '1', QSX_NO_TRAY: '1', QSX_CONFIG_FILE: cfg.file },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 
