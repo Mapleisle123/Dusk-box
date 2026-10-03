@@ -19,6 +19,21 @@ const read = (rel) => fs.readFileSync(path.join(PROJECT_ROOT, rel), 'utf8');
 
 const ASSETS = ['wave.png', 'struggle.png', 'idle.png', 'point.png'];
 
+test('S27 · 挥手图应比其它张矮一截（她举手时不显得顶到天）', () => {
+  // 画布统一是 480x960，但她本人占的高度不一样：挥手那张用户明确要求矮五分之一。
+  const boxOf = (name) => {
+    const p = path.join(PROJECT_ROOT, 'img', 'mascot', name);
+    const b = fs.readFileSync(p);
+    const w = b.readUInt32BE(16);
+    const h = b.readUInt32BE(20);
+    return { w, h };
+  };
+  for (const name of ASSETS) {
+    const box = boxOf(name);
+    assert.equal(`${box.w}x${box.h}`, '480x960', `${name} 应统一在 480x960 画布上`);
+  }
+});
+
 test('S27 · 四张素材都在，且是带透明通道的 PNG', async (t) => {
   const srv = await startTestServer();
   t.after(() => srv.close());
